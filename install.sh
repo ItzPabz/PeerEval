@@ -89,7 +89,11 @@ read -p "Enter site URL (e.g., peereval.example.com): " SITE_URL
 if [ -d "PeerEval" ]; then
     print_status "Updating existing repository..."
     cd PeerEval
+    # Stash any local changes
+    git stash
     git pull
+    # Apply stashed changes back
+    git stash pop
 else
     print_status "Cloning repository..."
     git clone https://github.com/ItzPabz/PeerEval.git
