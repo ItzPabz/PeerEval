@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Assignment Details - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">{{ assignment.name }}</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }}</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <span class="text-zinc-600 dark:text-zinc-400">{{ assignment.name }}</span>
+        </div>
+    </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <div class="flex flex-row justify-between items-center">
+                <h2 class="text-lg font-bold">Assignment Information</h2>
+                {% if section.term.start_date <= current_date and current_date <= section.term.end_date %}
+                <form method="POST" action="{% url 'delete_assignment' assignment.id %}" onsubmit="return confirm('Are you sure you want to delete this assignment? This action cannot be undone.');" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-red-500 hover:text-red-600 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Course</span>
+                    <span class="font-medium">{{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Term</span>
+                    <span class="font-medium">{{ section.term.name }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Available Date</span>
+                    <span class="font-medium">{{ assignment.available_date|date:"M d, Y" }} at {{ assignment.available_date|time:"g:i A" }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Due Date</span>
+                    <span class="font-medium">{{ assignment.due_date|date:"M d, Y" }} at {{ assignment.due_date|time:"g:i A" }}</span>
+                </div>
+            </div>
+        </div>
+
+                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <h2 class="text-lg font-bold">Evaluation Settings</h2>
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Self Evaluation</span>
+                    <span class="font-medium">{{ assignment.self_eval|yesno:"Enabled,Disabled" }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Maximum Points (Self)</span>
+                    <span class="font-medium">{{ assignment.max_points_self }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Maximum Points (Partner)</span>
+                    <span class="font-medium">{{ assignment.max_points_partner }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Submission Progress</span>
+                    <span class="font-medium">{{ submitted_count }} / {{ total_students }} Students</span>
+                </div>
+                <div class="w-full bg-zinc-300 dark:bg-zinc-700 rounded-full h-4">
+                    <div class="bg-blue-500 h-4 rounded-full transition-all duration-500" style="width: {{ submission_percentage }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        {% if assignment.enable_merits and avg_work_contribution is not None %}
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Average Merit Scores</h2>
+        <div class="flex flex-col gap-4">
+            <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <span class="text-zinc-600 dark:text-zinc-400">Work Contribution</span>
+                <span class="font-medium">{{ avg_work_contribution|floatformat:1 }}/5</span>
+            </div>
+            <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <span class="text-zinc-600 dark:text-zinc-400">Team Interaction</span>
+                <span class="font-medium">{{ avg_team_interaction|floatformat:1 }}/5</span>
+            </div>
+            <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <span class="text-zinc-600 dark:text-zinc-400">Team Awareness</span>
+                <span class="font-medium">{{ avg_team_awareness|floatformat:1 }}/5</span>
+            </div>
+            <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <span class="text-zinc-600 dark:text-zinc-400">Quality of Work</span>
+                <span class="font-medium">{{ avg_quality_of_work|floatformat:1 }}/5</span>
+            </div>
+            <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <span class="text-zinc-600 dark:text-zinc-400">Knowledge and Skills</span>
+                <span class="font-medium">{{ avg_knowledge_and_skills|floatformat:1 }}/5</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+        <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Student Evaluations</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for student in students %}
+            <div class="flex flex-col gap-2 bg-zinc-100 dark:bg-zinc-900 p-4 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <div class="flex flex-row justify-between items-center">
+                    <h3 class="font-bold">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ student.user_id.username }}</span>
+                </div>
+                {% if student.flags %}
+                <div class="flex flex-wrap gap-2">
+                    {% for flag in student.flags %}
+                    <span class="text-xs px-2 py-1 rounded-full 
+                        {% if flag == 'High Contribution' %}bg-green-500 text-white
+                        {% elif flag == 'Low Contribution' %}bg-red-500 text-white
+                        {% elif flag == 'Overconfident' %}bg-yellow-500 text-black
+                        {% elif flag == 'Underconfident' %}bg-blue-500 text-white
+                        {% elif flag == 'Evaluation Mismatch' %}bg-purple-500 text-white
+                        {% endif %}">
+                        {{ flag }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="flex flex-row justify-between text-sm">
+                    <span>Self Score: {{ student.self_score|default:"Not Submitted"|floatformat:1 }}</span>
+                    <span>Peer Score: {{ student.peer_score|default:"Not Submitted"|floatformat:1 }}</span>
+                </div>
+                {% if assignment.enable_merits and student.merit_scores %}
+                <div class="mt-2 text-sm">
+                    <div class="grid grid-cols-2 gap-2">
+                        <span>Work: {{ student.merit_scores.work|default:"N/A" }}/5</span>
+                        <span>Team: {{ student.merit_scores.team|default:"N/A" }}/5</span>
+                        <span>Aware: {{ student.merit_scores.aware|default:"N/A" }}/5</span>
+                        <span>Quality: {{ student.merit_scores.quality|default:"N/A" }}/5</span>
+                        <span>Skills: {{ student.merit_scores.skills|default:"N/A" }}/5</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center text-zinc-600 dark:text-zinc-400">
+                No student evaluations found
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Add Course - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Add Course</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}"
+                class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'add_course' %}"
+                class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Add
+                Course</a>
+        </div>
+    </div>
+    <div class="flex items-center justify-center">
+        <div
+            class="flex flex-col justify-center w-1/2 max-w-md bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-lg mt-2/3 mb-2/3">
+            <form method="POST">
+            {% csrf_token %}
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">DEPARTMENT</h3>
+                <select name="department" id="department"
+                    class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                    <option value="" disabled selected>Select Department</option>
+                    {% for department in departments %}
+                    <option value="{{ department.id }}">{{ department.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <c-input_text type="text" label="COURSE CODE" name="course_code" id="course_code" />
+            <c-input_text type="text" label="COURSE NAME" name="name" id="name" />
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE COORDINATOR</h3>
+                <select name="coordinator" id="coordinator"
+                    class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                    <option value="" disabled selected>Select Coordinator</option>
+                    {% for instructor in instructors %}
+                    <option value="{{ instructor.id }}">{{ instructor.first_name }} {{ instructor.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <c-btn_action type="submit" label="ADD COURSE" />
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

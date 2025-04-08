@@ -1,0 +1,14 @@
+<button
+    type="{{ type }}"
+    class="px-2 py-0.5 text-sm rounded-md {% if color %}bg-{{ color }}-500{% else %}bg-blue-500{% endif %} text-white hover:{% if color %}bg-{{ color }}-700{% else %}bg-blue-700{% endif %} transition-colors"
+    {% if onclick %}
+        onclick="{{ onclick }}"
+    {% endif %}
+>
+    <div class="flex flex-row items-center gap-1">
+        {% if icon %}
+            <i class="fas fa-{{ icon }}"></i>
+        {% endif %}
+        {{ label }}
+    </div>
+</button>

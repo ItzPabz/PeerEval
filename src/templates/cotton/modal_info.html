@@ -1,0 +1,15 @@
+<div class="fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50" id="modal" style="display: none;">
+    <div class="flex flex-col items-center p-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-200 dark:bg-zinc-800">
+        <button onclick="closeModal()" class="self-end text-red-500 hover:text-red-700 transition-colors">Close</button>
+        {{ slot }}
+    </div>
+</div>
+<script>
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    function openModal() {
+        document.getElementById('modal ').style.display = 'flex';
+    }
+</script>

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Evaluation Details - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Evaluation Details</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            {% if is_instructor %}
+                <a href="{% url 'student_profile' evaluation.evaluatee_id.username %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</a>
+            {% else %}
+                <span class="text-zinc-600 dark:text-zinc-400">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</span>
+            {% endif %}
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <span class="text-zinc-600 dark:text-zinc-400">Evaluation</span>
+        </div>
+    </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <h2 class="text-lg font-bold">Course Information</h2>
+            <div class="flex flex-col gap-3">
+                {% if evaluation.assignment_id.name %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Assignment</span>
+                    <span class="font-medium">{{ evaluation.assignment_id.name }}</span>
+                </div>
+                {% endif %}
+                {% if evaluation.assignment_id.section_id %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Course</span>
+                    <span class="font-medium">{{ evaluation.assignment_id.section_id.course.department.id }}{{ evaluation.assignment_id.section_id.course.course_code }}-{{ evaluation.assignment_id.section_id.section_number }}</span>
+                </div>
+                {% endif %}
+                {% if evaluation.assignment_id.section_id.term %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Term</span>
+                    <span class="font-medium">{{ evaluation.assignment_id.section_id.term.name }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <h2 class="text-lg font-bold">Evaluation Information</h2>
+            <div class="flex flex-col gap-3">
+                {% if evaluation.evaluator_id %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Evaluator</span>
+                    <span class="font-medium">{{ evaluation.evaluator_id.first_name }} {{ evaluation.evaluator_id.last_name }}</span>
+                </div>
+                {% endif %}
+                {% if evaluation.evaluatee_id %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Evaluatee</span>
+                    <span class="font-medium">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</span>
+                </div>
+                {% endif %}
+                {% if evaluation.points is not None and evaluation.assignment_id.max_points_self is not None %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Score</span>
+                    <span class="font-medium">{{ evaluation.points }}/{{ evaluation.assignment_id.max_points_self }}</span>
+                </div>
+                {% endif %}
+                {% if evaluation.submission_date %}
+                <div class="flex flex-col gap-1">
+                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Submitted</span>
+                    <span class="font-medium">{{ evaluation.submission_date|date:"M d, Y" }} at {{ evaluation.submission_date|time:"g:i A" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <h2 class="text-lg font-bold">Merit Scores</h2>
+            {% if merit_scores %}
+                <div class="flex flex-col gap-4">
+                    {% if merit_scores.score_workcontribution is not None %}
+                    <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                        <span class="text-zinc-600 dark:text-zinc-400">Work Contribution</span>
+                        <span class="font-medium">{{ merit_scores.score_workcontribution }}/5</span>
+                    </div>
+                    {% endif %}
+                    {% if merit_scores.score_teaminteraction is not None %}
+                    <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                        <span class="text-zinc-600 dark:text-zinc-400">Team Interaction</span>
+                        <span class="font-medium">{{ merit_scores.score_teaminteraction }}/5</span>
+                    </div>
+                    {% endif %}
+                    {% if merit_scores.score_teamawareness is not None %}
+                    <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                        <span class="text-zinc-600 dark:text-zinc-400">Team Awareness</span>
+                        <span class="font-medium">{{ merit_scores.score_teamawareness }}/5</span>
+                    </div>
+                    {% endif %}
+                    {% if merit_scores.score_qualityofwork is not None %}
+                    <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                        <span class="text-zinc-600 dark:text-zinc-400">Quality of Work</span>
+                        <span class="font-medium">{{ merit_scores.score_qualityofwork }}/5</span>
+                    </div>
+                    {% endif %}
+                    {% if merit_scores.score_knowledgeandskills is not None %}
+                    <div class="flex flex-row items-center justify-between bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                        <span class="text-zinc-600 dark:text-zinc-400">Knowledge & Skills</span>
+                        <span class="font-medium">{{ merit_scores.score_knowledgeandskills }}/5</span>
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="flex flex-col items-center justify-center p-8 text-center">
+                    <span class="text-zinc-600 dark:text-zinc-400">No merit scores available for this evaluation.</span>
+                </div>
+            {% endif %}
+        </div>
+
+                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <h2 class="text-lg font-bold">Comment</h2>
+            {% if evaluation.comments %}
+                <div class="flex flex-col gap-2 bg-zinc-100 dark:bg-zinc-900 p-4 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <p class="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">{{ evaluation.comments }}</p>
+                </div>
+            {% else %}
+                <div class="flex flex-col items-center justify-center p-8 text-center">
+                    <span class="text-zinc-600 dark:text-zinc-400">No comments provided for this evaluation.</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

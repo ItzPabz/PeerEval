@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Section Dashboard - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">{{term.name}} {{ section.course.department.id }}{{ section.course.course_code }} {{ section.course.name }} - Section {{ section.section_number }}</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }} {{ section.course.name }}</a>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+        <div
+            class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
+            <h2 class="text-lg font-bold">Section Statistics</h2>
+            <div class="flex flex-row gap-5 justify-center">
+                <c-stat_full title="Term" value="{{ term.name }}" icon="calendar" />
+                <c-stat_full title="Instructor" value="{{ user.first_name }} {{ user.last_name }}" icon="chalkboard-teacher" />
+                <c-stat_full title="Students" value="{{ students.count }}" icon="users" />
+                <c-stat_full title="Assignments" value="{{ assignments.count }}" icon="tasks" />
+                <c-stat_full title="Evaluations" value="{{ evaluations }}" icon="clipboard-check" />
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Quick Actions</h2>
+        <div class="flex flex-row gap-2">
+            {% if term.start_date <= current_date and current_date <= term.end_date %}
+                <c-btn_action type="button" label="Manage Students" icon="users-cog" onclick="window.location.href='{% url 'section_add_student' section.id %}'" />
+                <c-btn_action type="button" label="Create Assignment" icon="tasks" onclick="window.location.href='{% url 'section_add_assignment' section.id %}'" />
+                <c-btn_action type="button" label="Manage Groups" icon="users" onclick="window.location.href='{% url 'section_manage_groups' section.id %}'" />
+            {% endif %}
+            <c-btn_action type="button" label="Export Data" icon="download" onclick="window.location.href='{% url 'export_grades' section.id %}'" />
+        </div>
+    </div>
+
+    {% if students.count == 0 and assignments.count == 0 %}
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Import Data</h2>
+        <div class="flex flex-col gap-4">
+            <form method="POST" enctype="multipart/form-data" action="{% url 'import_wizard' section.id %}" id="import-form">
+                {% csrf_token %}
+                <div class="flex flex-row gap-2 items-center">
+                    <c-btn_action 
+                        type="button" 
+                        label="Import Students" 
+                        icon="file-import" 
+                        onclick="document.getElementById('import-file').click()"
+                        class="{% if BRIGHTSPACE_ENABLED %}bg-purple-500 hover:bg-purple-700{% else %}bg-orange-500 hover:bg-orange-700{% endif %}"
+                    />
+                    <input 
+                        type="file" 
+                        id="import-file" 
+                        name="import_file" 
+                        accept=".csv" 
+                        class="hidden" 
+                        onchange="handleFileSelect(this)"
+                    />
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Active Assignments</h2>
+        <div class="grid grid-cols-3 gap-4">
+            {% for assignment in assignments %}
+                {% if assignment.is_active %}
+                <div class="flex flex-row justify-between gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm">
+                    <div class="flex flex-col">
+                        <div class="flex items-center">
+                            <h3 class="text-md font-bold truncate">{{ assignment.name }}</h3>
+                            <c-stat_ball color="green" />
+                        </div>
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</span>
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <c-btn_mini type="button" label="View" icon="eye" onclick="window.location.href='{% url 'view_assignment' assignment.id %}'" />
+                        <c-btn_mini type="button" label="Edit" icon="pencil" onclick="window.location.href='{% url 'edit_assignment' assignment.id %}'" />
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Past & Upcoming Assignments</h2>
+        <div class="grid grid-cols-3 gap-4">
+            {% for assignment in assignments %}
+                {% if not assignment.is_active %}
+                <div class="flex flex-row justify-between gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm opacity-75">
+                    <div class="flex flex-col">
+                        <div class="flex items-center">
+                            <h3 class="text-md font-bold truncate">{{ assignment.name }}</h3>
+                        </div>
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</span>
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <c-btn_mini type="button" label="View" icon="eye" onclick="window.location.href='{% url 'view_assignment' assignment.id %}'" />
+                        <c-btn_mini type="button" label="Edit" icon="pencil" onclick="window.location.href='{% url 'edit_assignment' assignment.id %}'" />
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Students <span id="student-count" class="text-sm font-normal">({{ students.count }})</span></h2>
+        <div class="flex flex-row gap-2">
+            <input type="text" id="student-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search for a student by name, ID, or group number" oninput="filterStudents(this.value)" />
+        </div>
+        <script>
+            function filterStudents(query) {
+                const students = document.querySelectorAll('.student-card');
+                const lowercaseQuery = query.toLowerCase().trim();
+                let visibleCount = 0;
+                
+                students.forEach(student => {
+                    const name = student.querySelector('.student-name').textContent.toLowerCase();
+                    const id = student.querySelector('.student-id').textContent.toLowerCase();
+                    const group = student.querySelector('.student-group').textContent.toLowerCase();
+                    
+                    const isVisible = name.includes(lowercaseQuery) || 
+                                    id.includes(lowercaseQuery) || 
+                                    group.includes(lowercaseQuery);
+                    
+                    student.style.display = isVisible ? 'flex' : 'none';
+                    if (isVisible) visibleCount++;
+                });
+
+                document.getElementById('student-count').textContent = `(${visibleCount})`;
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('[data-student-url]').forEach(button => {
+                    button.addEventListener('click', function() {
+                        window.location.href = this.dataset.studentUrl;
+                    });
+                });
+            });
+        </script>
+        <div class="grid grid-cols-5 gap-4">
+            {% for student in students %}
+            <a href="{% url 'student_profile' student.user_id.username %}" class="student-card flex flex-col justify-center items-center bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors">
+                <div class="flex flex-col text-center items-center w-full">
+                    <h3 class="student-name text-lg font-bold truncate max-w-full w-full">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>  
+                    <div class="flex flex-row gap-2 items-center">
+                        <span class="student-id text-sm text-zinc-600 dark:text-zinc-400">{{ student.user_id.id }}</span>
+                        <span class="student-group text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-400 dark:bg-zinc-600 px-2 py-1 rounded-lg">Group {{ student.group.name }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+            alert('Please select a CSV file');
+            input.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            const firstLine = text.split('\n')[0];
+            
+            const isBrightspace = firstLine.includes('OrgDefinedId') && firstLine.includes('End-of-Line Indicator');
+            
+            if (!isBrightspace && !firstLine.includes('ID,Username,First Name,Last Name')) {
+                if (!confirm('Warning: CSV format not recognized. Continue anyway?')) {
+                    input.value = '';
+                    return;
+                }
+            }
+
+            document.getElementById('import-form').submit();
+        };
+        reader.readAsText(file);
+    }
+}
+</script>
+{% endblock %} 

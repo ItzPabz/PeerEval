@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .rating-box {
+        @apply w-10 h-10 flex items-center justify-center rounded-md border-2 cursor-pointer transition-colors duration-200 text-base font-medium;
+    }
+    
+    .rating-box-unchecked {
+        @apply bg-zinc-100 dark:bg-zinc-700 border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300;
+    }
+    
+    input[type="radio"]:checked + label.rating-box {
+        @apply bg-blue-500 border-blue-600 text-white;
+    }
+}

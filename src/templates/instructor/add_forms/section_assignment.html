@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Add Section Assignment - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Add Assignment to {{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <span class="text-zinc-600 dark:text-zinc-400">Add Assignment</span>
+        </div>
+    </div>
+
+    <div class="flex flex-col justify-center mx-auto w-full max-w-3xl bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-lg">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="col-span-2">
+                    <label for="id_name" class="block text-sm font-bold mb-2">ASSIGNMENT NAME</label>
+                    {{ form.name }}
+                </div>
+                <div>
+                    <label for="id_available_date" class="block text-sm font-bold mb-2">AVAILABLE DATE</label>
+                    {{ form.available_date }}
+                </div>
+                <div>
+                    <label for="id_due_date" class="block text-sm font-bold mb-2">DUE DATE</label>
+                    {{ form.due_date }}
+                </div>
+                <div>
+                    <label for="id_max_points_self" class="block text-sm font-bold mb-2">MAX POINTS (SELF)</label>
+                    {{ form.max_points_self }}
+                </div>
+                <div>
+                    <label for="id_max_points_partner" class="block text-sm font-bold mb-2">MAX POINTS (PARTNER)</label>
+                    {{ form.max_points_partner }}
+                </div>
+                <div class="flex items-center">
+                    {{ form.self_eval }}
+                    <label for="id_self_eval" class="ml-2 block text-sm font-bold">ENABLE SELF EVALUATION</label>
+                </div>
+                <div class="flex items-center">
+                    {{ form.enable_merits }}
+                    <label for="id_enable_merits" class="ml-2 block text-sm font-bold">ENABLE MERIT SCORING</label>
+                </div>
+                <div class="col-span-2 flex justify-end mt-4">
+                    <c-btn_action type="submit" label="CREATE ASSIGNMENT"/>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

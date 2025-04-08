@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Instructor Dashboard - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Instructor Dashboard</h1>
+<div class="flex flex-wrap gap-4">
+    <div
+        class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
+        <h2 class="text-lg font-bold">Your {{term.name}} Statistics</h2>
+        <div class="flex flex-row gap-5 justify-center">
+            <c-stat_full title="Courses" value="{{ active_courses.count }}" icon="book" />
+            <c-stat_full title="Sections" value="{{ active_sections.count }}" icon="chalkboard-teacher" />
+            <c-stat_full title="Assignments" value="{{ active_assignments.count }}" icon="tasks" />
+            <c-stat_full title="Students" value="{{ active_students.count }}" icon="users" />
+            <c-stat_full title="Evaluations" value="{{ active_evaluations.count }}" icon="clipboard-check" />
+        </div>
+    </div>
+</div>
+
+<div
+    class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
+    <h2 class="text-lg font-bold"> Quick Actions </h2>
+    <div class="flex flex-row gap-2">
+        {% if is_superuser %}
+        <c-btn_action type="button" label="Add Term" icon="calendar-days" onclick="window.location.href='{% url 'add_term' %}'" />
+        <c-btn_action type="button" label="Add Department" icon="building" onclick="window.location.href='{% url 'add_department' %}'" />
+        {%endif%}
+        {% if is_depthead %}
+        <c-btn_action type="button" label="Add Course" icon="book" onclick="window.location.href='{% url 'add_course' %}'" />
+        <c-btn_action type="button" label="Add Instructor" icon="chalkboard-teacher" onclick="window.location.href='{% url 'add_instructor' %}'" />
+        {% endif %}
+        {% if is_coordinator %}
+        <c-btn_action type="button" label="Add Section" icon="chalkboard" onclick="window.location.href='{% url 'add_section' %}'" />
+        {% endif %}
+        {% if is_instructor %}
+        <c-btn_action type="button" label="Add Student" icon="users" onclick="window.location.href='{% url 'add_students' %}'" />
+        {% endif %}
+    </div>
+</div>
+
+
+<div
+    class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
+    <h2 class="text-lg font-bold">Your {{term.name}} Courses</h2>
+    <div class="grid grid-cols-2 gap-4">
+        {% for course in active_courses %}
+        <div class="flex flex-col gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <div class="flex flex-col gap-2">
+                <div class="flex flex-row justify-between items-center">
+                    <h3 class="text-lg font-bold truncate">{{ course.department.id }}{{ course.course_code }} {{ course.name }}</h3>
+                    <div class="flex flex-row gap-2 items-center">
+                        {% if course.coordinator == user %}
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-400 dark:bg-zinc-600 px-2 py-1 rounded-lg">Course Coordinator</span>
+                        {% endif %}
+                        {% if is_depthead or course.coordinator == user %}
+                        <div class="flex flex-row gap-1">
+                            <a href="{% url 'edit_course' course.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'delete_course' course.id %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this course?');">
+                                {% csrf_token %}
+                                <button type="submit" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                {% for section in course.active_sections %}
+                <a href="{% url 'section_dashboard' section.id %}">
+                    <div class="flex flex-row justify-between gap-2 bg-zinc-400 dark:bg-zinc-600 p-2 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-600 dark:hover:bg-zinc-500 transition-colors">
+                        <div class="flex flex-col">
+                            <h4 class="text-md font-bold">Section {{ section.section_number }}</h4>
+                            {% if section.sectioninstructors_set.exists %}
+                            <span class="text-xs text-zinc-600 dark:text-zinc-400">
+                                Instructor: {{ section.sectioninstructors_set.first.user_id.first_name }} {{ section.sectioninstructors_set.first.user_id.last_name }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-row gap-2">
+                            <c-stat_mini icon="users" value="{{ section.student_count }}" title="Students" />
+                            <c-stat_mini icon="tasks" value="{{ section.assignment_count }}" title="Assignments" />
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div
+    class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
+    <h2 class="text-lg font-bold">Past Courses</h2>
+    <div class="flex flex-row gap-2">
+        <input type="text" id="past-section-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search by course name, code, term, or section number" oninput="filterPastSections(this.value)" />
+    </div>
+    <div class="grid grid-cols-2 gap-4" id="past-sections-grid">
+        {% for course in past_courses %}
+        <div class="term-card flex flex-col gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+            <div class="flex flex-col gap-2">
+                <div class="flex flex-row justify-between items-center">
+                    <h3 class="text-lg font-bold truncate">{{ course.department.id }}{{ course.course_code }} {{ course.name }}</h3>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                {% for section in course.past_sections %}
+                <a href="{% url 'section_dashboard' section.id %}" class="past-section-card">
+                    <div class="flex flex-row justify-between gap-2 bg-zinc-400 dark:bg-zinc-600 p-2 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-500 dark:hover:bg-zinc-500 transition-colors">
+                        <div class="flex flex-col">
+                            <h4 class="text-md font-bold">Section {{ section.section_number }}</h4>
+                            <span class="text-xs text-zinc-600 dark:text-zinc-400">{{ section.term.name }}</span>
+                        </div>
+                        <div class="flex flex-row gap-2">
+                            <c-stat_mini icon="users" value="{{ section.student_count }}" title="Students" />
+                            <c-stat_mini icon="tasks" value="{{ section.assignment_count }}" title="Assignments" />
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="flex justify-center items-center gap-4 mt-4">
+        <button id="prevPastPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+        <span class="text-sm"><span id="currentPastPage">1</span> / <span id="totalPastPages">1</span></span>
+        <button id="nextPastPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+    </div>
+</div>
+
+<script>
+    let currentPastPage = 1;
+    const pastItemsPerPage = 2; // Number of term cards per page
+    
+    function filterPastSections(query) {
+        const sections = document.querySelectorAll('.past-section-card');
+        const termCards = document.querySelectorAll('.term-card');
+        const lowercaseQuery = query.toLowerCase().trim();
+        
+        termCards.forEach(termCard => {
+            let hasVisibleSections = false;
+            const sectionsInTerm = termCard.querySelectorAll('.past-section-card');
+            
+            sectionsInTerm.forEach(section => {
+                const courseCode = section.querySelector('h4').textContent.toLowerCase();
+                const termName = section.querySelector('.text-xs').textContent.toLowerCase();
+                const instructor = section.querySelectorAll('.text-xs')[1]?.textContent.toLowerCase() || '';
+                
+                const isVisible = courseCode.includes(lowercaseQuery) || 
+                                termName.includes(lowercaseQuery) ||
+                                instructor.includes(lowercaseQuery);
+                
+                if (isVisible) {
+                    section.dataset.filtered = 'true';
+                    hasVisibleSections = true;
+                } else {
+                    section.dataset.filtered = 'false';
+                }
+            });
+            
+            termCard.dataset.filtered = hasVisibleSections ? 'true' : 'false';
+        });
+
+        currentPastPage = 1;
+        showPastPage(currentPastPage);
+    }
+
+    function showPastPage(page) {
+        const filteredTermCards = Array.from(document.querySelectorAll('.term-card[data-filtered="true"]'));
+        const pageCount = Math.ceil(filteredTermCards.length / pastItemsPerPage);
+        
+        document.querySelectorAll('.term-card').forEach(card => {
+            card.style.display = 'none';
+        });
+
+        filteredTermCards.forEach((card, index) => {
+            if (index >= (page - 1) * pastItemsPerPage && index < page * pastItemsPerPage) {
+                card.style.display = 'flex';
+            }
+        });
+        
+        document.getElementById('currentPastPage').textContent = page;
+        document.getElementById('totalPastPages').textContent = pageCount || 1;
+        document.getElementById('prevPastPage').disabled = page === 1;
+        document.getElementById('nextPastPage').disabled = page === pageCount || pageCount === 0;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.term-card').forEach(card => {
+            card.dataset.filtered = 'true';
+        });
+
+        document.getElementById('prevPastPage').addEventListener('click', () => {
+            if (currentPastPage > 1) {
+                currentPastPage--;
+                showPastPage(currentPastPage);
+            }
+        });
+
+        document.getElementById('nextPastPage').addEventListener('click', () => {
+            const filteredCount = document.querySelectorAll('.term-card[data-filtered="true"]').length;
+            const pageCount = Math.ceil(filteredCount / pastItemsPerPage);
+            if (currentPastPage < pageCount) {
+                currentPastPage++;
+                showPastPage(currentPastPage);
+            }
+        });
+
+        showPastPage(1);
+    });
+</script>
+
+{% if instructor_students %}
+<div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 mt-4">
+    <h2 class="text-lg font-bold">Student List <span id="student-count" class="text-sm font-normal">({{ instructor_students|length }})</span></h2>
+    <div class="flex flex-row gap-2">
+        <input type="text" id="student-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search for a student by name or ID" oninput="filterStudents(this.value)" />
+    </div>
+    <script>
+        let currentPage = 1;
+        const itemsPerPage = 24;
+        
+        function filterStudents(query) {
+            const students = document.querySelectorAll('.student-card');
+            const lowercaseQuery = query.toLowerCase().trim();
+            let visibleCount = 0;
+            
+            students.forEach(student => {
+                const name = student.querySelector('.student-name').textContent.toLowerCase();
+                const id = student.querySelector('.student-id').textContent.toLowerCase();
+                
+                const isVisible = name.includes(lowercaseQuery) || 
+                                id.includes(lowercaseQuery);
+                
+                if (isVisible) {
+                    student.dataset.filtered = 'true';
+                    visibleCount++;
+                } else {
+                    student.dataset.filtered = 'false';
+                }
+            });
+
+            document.getElementById('student-count').textContent = `(${visibleCount})`;
+            currentPage = 1;
+            showPage(currentPage);
+        }
+
+        function showPage(page) {
+            const filteredStudents = Array.from(document.querySelectorAll('.student-card[data-filtered="true"]'));
+            const pageCount = Math.ceil(filteredStudents.length / itemsPerPage);
+            
+            document.querySelectorAll('.student-card').forEach(student => {
+                student.style.display = 'none';
+            });
+
+            filteredStudents.forEach((student, index) => {
+                if (index >= (page - 1) * itemsPerPage && index < page * itemsPerPage) {
+                    student.style.display = 'flex';
+                }
+            });
+            
+            document.getElementById('currentPage').textContent = page;
+            document.getElementById('totalPages').textContent = pageCount || 1;
+            document.getElementById('prevPage').disabled = page === 1;
+            document.getElementById('nextPage').disabled = page === pageCount || pageCount === 0;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.student-card').forEach(student => {
+                student.dataset.filtered = 'true';
+            });
+
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    showPage(currentPage);
+                }
+            });
+
+            document.getElementById('nextPage').addEventListener('click', () => {
+                const filteredCount = document.querySelectorAll('.student-card[data-filtered="true"]').length;
+                const pageCount = Math.ceil(filteredCount / itemsPerPage);
+                if (currentPage < pageCount) {
+                    currentPage++;
+                    showPage(currentPage);
+                }
+            });
+
+            showPage(1);
+        });
+    </script>
+    <div class="grid grid-cols-6 gap-4">
+        {% for student in instructor_students %}
+            {% ifchanged student.user_id.id %}
+            <a href="{% url 'student_profile' student.user_id.username %}" class="student-card flex flex-col justify-center items-center bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors">
+                <div class="flex flex-col text-center items-center w-full">
+                    <h3 class="student-name text-lg font-bold truncate max-w-full w-full">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>  
+                    <div class="flex flex-row gap-2 items-center">
+                        <span class="student-id text-sm text-zinc-600 dark:text-zinc-400">{{ student.user_id.id }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endifchanged %}
+        {% endfor %}
+    </div>
+    <div class="flex justify-center items-center gap-4 mt-4">
+        <button id="prevPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+        <span class="text-sm"><span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+        <button id="nextPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+    </div>
+</div>
+{% endif %}
+    {% endblock %}

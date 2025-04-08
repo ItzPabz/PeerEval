@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Edit Course - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Edit Course: {{ course.department.id }}{{ course.course_code }} - {{ course.name }}</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <span class="text-zinc-600 dark:text-zinc-400">Edit Course</span>
+        </div>
+    </div>
+
+    <div class="flex flex-col justify-center mx-auto w-full max-w-3xl bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-lg">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="col-span-2">
+                    <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">DEPARTMENT</h3>
+                    <select name="department" id="id_department" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                        {% for department in departments %}
+                        <option value="{{ department.id }}" {% if department.id == course.department.id %}selected{% endif %}>{{ department.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE CODE</h3>
+                    <input type="text" name="course_code" id="id_course_code" value="{{ course.course_code }}" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50" />
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE NAME</h3>
+                    <input type="text" name="name" id="id_name" value="{{ course.name }}" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50" />
+                </div>
+                <div class="col-span-2">
+                    <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE COORDINATOR</h3>
+                    <select name="coordinator" id="id_coordinator" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                        {% for instructor in instructors %}
+                        <option value="{{ instructor.id }}" {% if instructor.id == course.coordinator.id %}selected{% endif %}>{{ instructor.first_name }} {{ instructor.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-span-2 flex justify-end gap-4 mt-4">
+                    <a href="{% url 'index' %}" class="px-4 py-2 bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors">CANCEL</a>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">SAVE CHANGES</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

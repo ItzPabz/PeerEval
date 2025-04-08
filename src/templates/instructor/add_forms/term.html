@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Add Term  - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Add Term</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}"
+                class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'add_term' %}"
+                class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Add
+                Term</a>
+        </div>
+    </div>
+    <div class="flex items-center justify-center">
+        <div
+            class="flex flex-col justify-center w-1/2 max-w-md bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-lg mt-2/3 mb-2/3">
+            <form method="POST">
+            {% csrf_token %}
+            <c-input_text type="text" label="TERM NAME" name="name" id="name" placeholder="Spring 2025" />
+            <c-input_date label="START DATE" name="start_date" id="start_date" />
+            <c-input_date label="END DATE" name="end_date" id="end_date" />
+            <c-btn_action type="submit" label="ADD TERM" />
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

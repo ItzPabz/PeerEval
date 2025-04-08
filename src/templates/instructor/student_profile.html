@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Student Profile - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">{{ student.first_name }} {{ student.last_name }}'s Profile</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'student_profile' student.username %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ student.first_name }} {{ student.last_name }}</a>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+        <div
+            class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
+            <h2 class="text-lg font-bold">Student's Merits Score</h2>
+            <div class="flex flex-row gap-5 justify-center lg:flex-row md:flex-col sm:flex-col">
+                <c-stat_full title="Work Contribution" value="{{ work_contribution_avg }}" icon="briefcase" />
+                <c-stat_full title="Team Interaction" value="{{ team_interaction_avg }}" icon="comments" />
+                <c-stat_full title="Team Awareness" value="{{ team_awareness_avg }}" icon="users" />
+                <c-stat_full title="Quality of Work" value="{{ quality_of_work_avg }}" icon="star" />
+                <c-stat_full title="Knowledge & Skills" value="{{ knowledge_and_skills_avg }}" icon="brain" />
+            </div>
+        </div>
+    </div>
+
+        <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <div class="flex flex-row gap-2 items-center">
+            <h2 class="text-lg font-bold">Evaluations Received</h2> 
+            <span class="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-300 dark:bg-zinc-700 px-2 py-0.5 rounded-lg">Only showing your sections</span>
+        </div>
+        {% if received_evaluations %}
+            <div class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2">
+                {% for evaluation in received_evaluations %}
+                    <a href="{% url 'evaluation_view' evaluation.id %}" class="flex flex-row items-center gap-4 bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                        <div class="flex flex-col min-w-0 flex-1">
+                            <div class="flex flex-row items-center gap-2">
+                                <span class="font-medium truncate">{{ evaluation.evaluator_id.first_name }} {{ evaluation.evaluator_id.last_name }}</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">•</span>
+                                <span class="font-medium">{{ evaluation.points }}/{{ evaluation.assignment_id.max_points_self }}</span>
+                            </div>
+                            <div class="flex flex-row items-center gap-2 text-sm">
+                                <span class="text-zinc-600 dark:text-zinc-400">{{ evaluation.assignment_id.section_id.term.name }} {{ evaluation.assignment_id.section_id.course.department.id }}{{ evaluation.assignment_id.section_id.course.course_code }}-{{ evaluation.assignment_id.section_id.section_number }}</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">•</span>
+                                <span class="text-zinc-600 dark:text-zinc-400 truncate">{{ evaluation.assignment_id.name }}</span>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex flex-col items-center justify-center p-8 text-center">
+                <span class="text-zinc-600 dark:text-zinc-400">No evaluations found for sections you instruct.</span>
+            </div>
+        {% endif %}
+    </div>
+
+        <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <div class="flex flex-row gap-2 items-center">
+            <h2 class="text-lg font-bold">Evaluations Given</h2> 
+            <span class="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-300 dark:bg-zinc-700 px-2 py-0.5 rounded-lg">Only showing your sections</span>
+        </div>
+        {% if evaluations %}
+            <div class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2">
+                {% for evaluation in evaluations %}
+                    <a href="{% url 'evaluation_view' evaluation.id %}" class="flex flex-row items-center gap-4 bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                        <div class="flex flex-col min-w-0 flex-1">
+                            <div class="flex flex-row items-center gap-2">
+                                <span class="font-medium truncate">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">•</span>
+                                <span class="font-medium">{{ evaluation.points }}/{{ evaluation.assignment_id.max_points_self }}</span>
+                            </div>
+                            <div class="flex flex-row items-center gap-2 text-sm">
+                                <span class="text-zinc-600 dark:text-zinc-400">{{ evaluation.assignment_id.section_id.term.name }} {{ evaluation.assignment_id.section_id.course.department.id }}{{ evaluation.assignment_id.section_id.course.course_code }}-{{ evaluation.assignment_id.section_id.section_number }}</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">•</span>
+                                <span class="text-zinc-600 dark:text-zinc-400 truncate">{{ evaluation.assignment_id.name }}</span>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex flex-col items-center justify-center p-8 text-center">
+                <span class="text-zinc-600 dark:text-zinc-400">No evaluations found for sections you instruct.</span>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

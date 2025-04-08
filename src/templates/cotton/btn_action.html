@@ -1,0 +1,12 @@
+<button
+    type="{{ type }}"
+    class="w-full p-2 rounded-md bg-blue-500 text-white hover:bg-blue-900 transition-colors"
+    {% if onclick %}
+        onclick="{{ onclick }}"
+    {% endif %}
+>
+    {% if icon %}
+        <i class="fas fa-{{ icon }} mr-2"></i>
+    {% endif %}
+    {{ label }}
+</button>

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Student Dashboard</h1>
+{% if assignments %}
+<div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
+    <h2 class="text-xl font-semibold mb-3">Remaining Evaluations</h2>
+    <div class="grid grid-cols-3 gap-4">
+        {% for assignment in assignments %}
+        <a href="{% url 'evaluation' assignment.section_id.course.department.id assignment.section_id.course.course_code assignment.section_id.section_number assignment.id %}"
+            class="block">
+            <div
+                class="bg-zinc-300 dark:bg-zinc-700 rounded border border-zinc-100 dark:border-zinc-600 p-3 bg-zinc-400 dark:bg-zinc-600 {% if assignment.is_active %}hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors{% endif %}">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center">
+                            <h3 class="text-lg font-semibold">{{ assignment.section_id.course.department.id }}{{
+                                assignment.section_id.course.course_code }} {{ assignment.name }}</h3>
+                            {% if assignment.is_available %}
+                            <c-stat_ball color="{{ assignment.alert_level }}" />
+                            {% else %}
+                            <c-stat_ball color="{{ assignment.alert_level }}" />
+                            {% endif %}
+                        </div>
+                        {% if assignment.is_active %}
+                        <p class="text-sm text-zinc-600 dark:text-zinc-300">Due {{ assignment.due_date }} ({{
+                            assignment.due_date|timeuntil }} remaining) </p>
+                        {% else %}
+                        <p class="text-sm text-zinc-600 dark:text-zinc-300">Available {{ assignment.available_date }}
+                            (Opens in {{
+                            assignment.available_date|timeuntil }}) </p>
+                        {% endif %}
+                    </div>
+                    {% if not assignment.is_active %}
+                    <div class="flex items-center">
+                        <div
+                            class="bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-100 dark:border-zinc-700 p-3 w-10 h-10 flex items-center justify-center cursor-default">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full border-dashed">
+    <h2 class="text-md font-semibold text-center">You have no remaining evaluations.</h2>
+</div>
+{% endif %}
+
+<div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
+    <h2 class="text-lg font-bold">Past Evaluations</h2>
+    <div class="flex flex-row gap-2 mt-2">
+        <input type="text" id="past-evaluations-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search by student name, course, or assignment" oninput="filterPastEvaluations(this.value)" />
+    </div>
+
+    {% if past_evaluations %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mt-4" id="past-evaluations-grid">
+            {% for evaluation in past_evaluations %}
+                <a href="{% url 'evaluation_view' evaluation.id %}" class="past-evaluation-card flex flex-row items-center gap-4 bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <div class="flex flex-row items-center gap-2">
+                            <span class="font-medium truncate">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</span>
+                        </div>
+                        <div class="flex flex-row items-center gap-2 text-sm">
+                            <span class="text-zinc-600 dark:text-zinc-400">{{ evaluation.assignment_id.section_id.term.name }} {{ evaluation.assignment_id.section_id.course.department.id }}{{ evaluation.assignment_id.section_id.course.course_code }}-{{ evaluation.assignment_id.section_id.section_number }}</span>
+                            <span class="text-zinc-600 dark:text-zinc-400">•</span>
+                            <span class="text-zinc-600 dark:text-zinc-400 truncate">{{ evaluation.assignment_id.name }}</span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+
+                <div class="flex justify-center items-center gap-4 mt-4">
+            <button id="prevPastEvalPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+            <span class="text-sm"><span id="currentPastEvalPage">1</span> / <span id="totalPastEvalPages">1</span></span>
+            <button id="nextPastEvalPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+        </div>
+    {% else %}
+        <div class="flex flex-col items-center justify-center p-8 text-center">
+            <span class="text-zinc-600 dark:text-zinc-400">No past evaluations found.</span>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    let currentPastEvalPage = 1;
+    const pastEvalItemsPerPage = 9; // Number of evaluation cards per page
+    
+    function filterPastEvaluations(query) {
+        const evaluations = document.querySelectorAll('.past-evaluation-card');
+        const lowercaseQuery = query.toLowerCase().trim();
+        
+        evaluations.forEach(evaluation => {
+            const studentName = evaluation.querySelector('.font-medium').textContent.toLowerCase();
+            const courseInfo = evaluation.querySelectorAll('.text-zinc-600')[0].textContent.toLowerCase();
+            const assignmentName = evaluation.querySelectorAll('.text-zinc-600')[2].textContent.toLowerCase();
+            
+            const isVisible = studentName.includes(lowercaseQuery) || 
+                            courseInfo.includes(lowercaseQuery) ||
+                            assignmentName.includes(lowercaseQuery);
+            
+            if (isVisible) {
+                evaluation.dataset.filtered = 'true';
+            } else {
+                evaluation.dataset.filtered = 'false';
+            }
+        });
+
+        currentPastEvalPage = 1;
+        showPastEvalPage(currentPastEvalPage);
+    }
+
+    function showPastEvalPage(page) {
+        const filteredEvaluations = Array.from(document.querySelectorAll('.past-evaluation-card[data-filtered="true"]'));
+        const pageCount = Math.ceil(filteredEvaluations.length / pastEvalItemsPerPage);
+        
+        document.querySelectorAll('.past-evaluation-card').forEach(evaluation => {
+            evaluation.style.display = 'none';
+        });
+
+        filteredEvaluations.forEach((evaluation, index) => {
+            if (index >= (page - 1) * pastEvalItemsPerPage && index < page * pastEvalItemsPerPage) {
+                evaluation.style.display = 'flex';
+            }
+        });
+        
+        document.getElementById('currentPastEvalPage').textContent = page;
+        document.getElementById('totalPastEvalPages').textContent = pageCount || 1;
+        document.getElementById('prevPastEvalPage').disabled = page === 1;
+        document.getElementById('nextPastEvalPage').disabled = page === pageCount || pageCount === 0;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.past-evaluation-card').forEach(evaluation => {
+            evaluation.dataset.filtered = 'true';
+        });
+
+        document.getElementById('prevPastEvalPage').addEventListener('click', () => {
+            if (currentPastEvalPage > 1) {
+                currentPastEvalPage--;
+                showPastEvalPage(currentPastEvalPage);
+            }
+        });
+
+        document.getElementById('nextPastEvalPage').addEventListener('click', () => {
+            const filteredCount = document.querySelectorAll('.past-evaluation-card[data-filtered="true"]').length;
+            const pageCount = Math.ceil(filteredCount / pastEvalItemsPerPage);
+            if (currentPastEvalPage < pageCount) {
+                currentPastEvalPage++;
+                showPastEvalPage(currentPastEvalPage);
+            }
+        });
+
+        showPastEvalPage(1);
+    });
+</script>
+{% endblock %}
