@@ -49,6 +49,4 @@ A Django-based web application for managing peer evaluations in educational sett
 - Virtual environment (recommended)
 
 ## Installation
-
-### Quick Install
-1. Run `curl -O https://raw.githubusercontent.com/ItzPabz/PeerEval/master/install.sh && chmod +x install.sh && ./install.sh`
+Coming soon
