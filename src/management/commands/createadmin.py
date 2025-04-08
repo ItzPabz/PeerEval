@@ -1,33 +1,27 @@
 from django.core.management.base import BaseCommand
-from src.models import Users
+from django.contrib.auth.models import User
+import os
 
 class Command(BaseCommand):
-    help = 'Creates an admin user for the system'
+    help = 'Creates a superuser with the specified credentials'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--username', type=str, help='Admin username')
+        parser.add_argument('--password', type=str, help='Admin password')
+        parser.add_argument('--email', type=str, help='Admin email')
 
     def handle(self, *args, **options):
-        self.stdout.write('Creating admin user...')
-        
-        self.create_admin_user()
+        username = options.get('username') or os.getenv('ADMIN_USERNAME')
+        password = options.get('password') or os.getenv('ADMIN_PASSWORD')
+        email = options.get('email') or os.getenv('ADMIN_EMAIL')
 
-    def create_admin_user(self):
-        username = input('Enter admin username: ')
-        first_name = input('Enter admin first name: ')
-        last_name = input('Enter admin last name: ')
-        id = input('Enter admin id: ')
-        
-        if Users.objects.filter(username=username).exists():
-            self.stdout.write(self.style.WARNING(f'User {username} already exists.'))
+        if not all([username, password, email]):
+            self.stdout.write(self.style.ERROR('Missing required arguments. Please provide --username, --password, and --email'))
             return
-            
-        user = Users.objects.create_user(
-            username=username,
-            id=id,
-            password=id,
-            first_name=first_name,
-            last_name=last_name,
-            is_staff=True,
-            is_superuser=True,
-            is_instructor=True
-        )
-        
-        self.stdout.write(self.style.SUCCESS(f'Admin user {username} created successfully.'))
+
+        if User.objects.filter(username=username).exists():
+            self.stdout.write(self.style.WARNING(f'User {username} already exists'))
+            return
+
+        User.objects.create_superuser(username=username, email=email, password=password)
+        self.stdout.write(self.style.SUCCESS(f'Successfully created admin user {username}'))

@@ -137,10 +137,18 @@ docker run --rm \
 
 read -p "Do you want to create an admin user? (y/n): " CREATE_ADMIN
 if [ "$CREATE_ADMIN" = "y" ]; then
+    read -p "Enter admin username: " ADMIN_USERNAME
+    read -s -p "Enter admin password: " ADMIN_PASSWORD
+    echo
+    read -p "Enter admin email: " ADMIN_EMAIL
+    
     docker run --rm \
         --network peereval-network \
         -e DATABASE_URL=postgres://peereval:peereval@peereval-db:5432/peereval \
-        peereval python manage.py createadmin
+        -e ADMIN_USERNAME="$ADMIN_USERNAME" \
+        -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        -e ADMIN_EMAIL="$ADMIN_EMAIL" \
+        peereval python manage.py createadmin --username "$ADMIN_USERNAME" --password "$ADMIN_PASSWORD" --email "$ADMIN_EMAIL"
 fi
 
 print_status "Starting application container..."
