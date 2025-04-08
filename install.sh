@@ -109,6 +109,10 @@ sed -i "s|NPM_BIN_PATH = '.*'|NPM_BIN_PATH = '$NPM_PATH'|" peereval/settings.py
 print_status "Building Docker image..."
 docker build -t peereval .
 
+print_status "Cleaning up existing containers..."
+docker stop peereval-app peereval-db || true
+docker rm peereval-app peereval-db || true
+
 print_status "Creating Docker network..."
 docker network create peereval-network || true
 
