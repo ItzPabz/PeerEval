@@ -1,8 +1,9 @@
 FROM python:3.11-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV STATIC_ROOT=/app/staticfiles
 
 # Set work directory
 WORKDIR /app
@@ -21,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project
 COPY . .
+
+# Create static directory
+RUN mkdir -p /app/staticfiles
 
 # Collect static files
 RUN python manage.py collectstatic --noinput
