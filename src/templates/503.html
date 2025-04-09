@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8 text-center">
+        <div>
+            <h1 class="text-9xl font-extrabold text-purple-600">503</h1>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">Service Unavailable</h2>
+            <p class="mt-2 text-sm text-gray-600">
+                The service is temporarily unavailable. Please try again later.
+            </p>
+        </div>
+        <div class="mt-8">
+            <a href="{% url 'index' %}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                Return to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

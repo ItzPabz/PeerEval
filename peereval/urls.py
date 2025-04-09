@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from src.views import CustomLogoutView
+from django.conf.urls import handler400, handler403, handler404, handler500
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,3 +25,9 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),
     path('', include('src.urls')),
 ]
+
+# Error handlers
+handler400 = 'src.views.bad_request'
+handler403 = 'src.views.permission_denied'
+handler404 = 'src.views.page_not_found'
+handler500 = 'src.views.server_error'
