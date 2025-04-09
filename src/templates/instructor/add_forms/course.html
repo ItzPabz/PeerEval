@@ -22,7 +22,7 @@
             <div class="mb-4">
                 <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">DEPARTMENT</h3>
                 <select name="department" id="department"
-                    class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                    class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50">
                     <option value="" disabled selected>Select Department</option>
                     {% for department in departments %}
                     <option value="{{ department.id }}">{{ department.name }}</option>
@@ -34,7 +34,7 @@
             <div class="mb-4">
                 <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE COORDINATOR</h3>
                 <select name="coordinator" id="coordinator"
-                    class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                    class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50">
                     <option value="" disabled selected>Select Coordinator</option>
                     {% for instructor in instructors %}
                     <option value="{{ instructor.id }}">{{ instructor.first_name }} {{ instructor.last_name }}</option>

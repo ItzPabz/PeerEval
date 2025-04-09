@@ -25,12 +25,12 @@
                             {% if member.user_id.id == user.id %}
                                 <div class="flex flex-col gap-1">
                                     <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">Points</label>
-                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_self }}" data-max-points="{{ assignment.max_points_self }}" data-is-self="true" class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50"/>
+                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_self }}" data-max-points="{{ assignment.max_points_self }}" data-is-self="true" class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50"/>
                                 </div>
                             {% else %}
                                 <div class="flex flex-col gap-1">
                                     <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">Points</label>
-                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_partner }}" data-max-points="{{ assignment.max_points_partner }}" data-is-self="false" class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50"/>
+                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_partner }}" data-max-points="{{ assignment.max_points_partner }}" data-is-self="false" class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50"/>
                                 </div>
                             {% endif %}
                             <div class="flex flex-row gap-2">

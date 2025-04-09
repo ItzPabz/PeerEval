@@ -18,7 +18,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="col-span-2">
                     <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">DEPARTMENT</h3>
-                    <select name="department" id="id_department" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                    <select name="department" id="id_department" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50">
                         {% for department in departments %}
                         <option value="{{ department.id }}" {% if department.id == course.department.id %}selected{% endif %}>{{ department.name }}</option>
                         {% endfor %}
@@ -26,15 +26,15 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE CODE</h3>
-                    <input type="text" name="course_code" id="id_course_code" value="{{ course.course_code }}" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50" />
+                    <input type="text" name="course_code" id="id_course_code" value="{{ course.course_code }}" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50" />
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE NAME</h3>
-                    <input type="text" name="name" id="id_name" value="{{ course.name }}" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50" />
+                    <input type="text" name="name" id="id_name" value="{{ course.name }}" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50" />
                 </div>
                 <div class="col-span-2">
                     <h3 class="text-sm font-medium text-zinc-700 dark:text-zinc-200">COURSE COORDINATOR</h3>
-                    <select name="coordinator" id="id_coordinator" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-{{ INST_COLOR }}-500 dark:focus:ring-{{ INST_COLOR }}-500 dark:bg-zinc-950 dark:text-zinc-50">
+                    <select name="coordinator" id="id_coordinator" class="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50">
                         {% for instructor in instructors %}
                         <option value="{{ instructor.id }}" {% if instructor.id == course.coordinator.id %}selected{% endif %}>{{ instructor.first_name }} {{ instructor.last_name }}</option>
                         {% endfor %}
