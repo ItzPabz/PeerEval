@@ -1,5 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # PeerEval
+A peer evaluation system for academic institutions.
 
-Description coming soon
+## README in Progress
