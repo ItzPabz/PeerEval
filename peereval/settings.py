@@ -165,7 +165,7 @@ STATIC_URL = 'static/'
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, 'staticfiles'))
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR, 'theme', 'static'),
 ]
 
 # Default primary key field type
