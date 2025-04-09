@@ -17,6 +17,7 @@ import csv
 from datetime import datetime
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+import re
 
 def rate_limit_login(username):
     cache_key = f"login_attempts_{username}"
@@ -1354,6 +1355,13 @@ def import_wizard(request, section_id):
         messages.error(request, 'You do not have permission to import data for this section.')
         return redirect('section_dashboard', section_id=section_id)
 
+    def extract_group_number(group_text):
+        if not group_text:
+            return None
+        # Remove any non-digit characters and get the first number found
+        numbers = re.findall(r'\d+', group_text)
+        return numbers[0] if numbers else None
+
     if request.method == 'POST' and request.FILES.get('import_file'):
         try:
             csv_file = request.FILES['import_file']
@@ -1375,6 +1383,13 @@ def import_wizard(request, section_id):
                 messages.error(request, f'CSV file must contain the following columns: {", ".join(required_fields)}')
                 return redirect('import_wizard', section_id=section_id)
 
+            # Find group column
+            group_column = None
+            for col in csv_reader.fieldnames:
+                if 'group' in col.lower():
+                    group_column = col
+                    break
+
             users_created = 0
             users_updated = 0
             enrollments_created = 0
@@ -1389,11 +1404,11 @@ def import_wizard(request, section_id):
                     if is_brightspace:
                         user_id = row['OrgDefinedId'].strip('#')
                         username = row['Username'].strip('#')
-                        group_name = row.get('Lab Groups', '').replace('Group ', '') if row.get('Lab Groups') else None
+                        group_name = extract_group_number(row.get(group_column, '')) if group_column else None
                     else:
                         user_id = row['ID'].strip()
                         username = row['Username'].strip()
-                        group_name = None
+                        group_name = extract_group_number(row.get(group_column, '')) if group_column else None
                         
                     first_name = row['First Name'].strip()
                     last_name = row['Last Name'].strip()

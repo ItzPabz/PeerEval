@@ -394,6 +394,7 @@ class InstructorForm(forms.ModelForm):
         instance = super().save(commit=False)
         instance.is_instructor = True
         if commit:
+            instance.set_password(self.cleaned_data['id'])
             instance.save()
         return instance
 
