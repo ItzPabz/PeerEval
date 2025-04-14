@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Manage Section Instructors - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Manage Instructors - {{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</h1>
+        <div class="flex flex-row gap-2">
+            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</a>
+            <span class="text-zinc-600 dark:text-zinc-400">/</span>
+            <span class="text-zinc-600 dark:text-zinc-400">Manage Instructors</span>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Current Instructors <span id="instructor-count" class="text-sm font-normal">({{ current_instructors.count }})</span></h2>
+        <div class="mb-4">
+            <input type="text" id="instructor-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search current instructors by name or ID" oninput="filterInstructors(this.value)" />
+        </div>
+
+        <form method="POST" action="{% url 'section_remove_instructors' section.id %}" onsubmit="return confirmRemoveInstructors()">
+            {% csrf_token %}
+            <div class="mb-4 max-h-[300px] overflow-y-auto bg-zinc-100 dark:bg-zinc-900 rounded-lg p-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {% for instructor in current_instructors %}
+                        <div class="instructor-item cursor-pointer text-center p-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border-2 border-transparent flex flex-col justify-center items-center" onclick="toggleInstructorSelection(this, '{{ instructor.user_id.id }}')">
+                            <div class="flex flex-col text-center items-center w-full">
+                                <h3 class="instructor-name text-lg font-bold truncate max-w-full w-full">{{ instructor.user_id.first_name }} {{ instructor.user_id.last_name }}</h3>
+                                <div class="flex flex-row gap-2 items-center">
+                                    <span class="instructor-id text-sm text-zinc-600 dark:text-zinc-400">{{ instructor.user_id.id }}</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" name="remove_instructors" value="{{ instructor.user_id.id }}" class="hidden" id="remove_instructor_{{ instructor.user_id.id }}">
+                        </div>
+                    {% empty %}
+                        <div class="col-span-full text-center text-zinc-600 dark:text-zinc-400">
+                            No instructors currently assigned
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex justify-center items-center">
+                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Remove Selected Instructors
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <h2 class="text-lg font-bold">Add New Instructors <span id="available-count" class="text-sm font-normal">({{ available_instructors.count }})</span></h2>
+        <div class="mb-4">
+            <input type="text" id="instructor-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search available instructors by name or ID" oninput="filterAvailableInstructors(this.value)" />
+        </div>
+        
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-4 max-h-[300px] overflow-y-auto bg-zinc-100 dark:bg-zinc-900 rounded-lg p-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {% for instructor in available_instructors %}
+                        <div class="instructor-item cursor-pointer text-center p-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border-2 border-transparent flex flex-col justify-center items-center" onclick="toggleInstructorSelection(this, '{{ instructor.id }}')">
+                            <div class="flex flex-col text-center items-center w-full">
+                                <h3 class="instructor-name text-lg font-bold truncate max-w-full w-full">{{ instructor.first_name }} {{ instructor.last_name }}</h3>
+                                <div class="flex flex-row gap-2 items-center">
+                                    <span class="instructor-id text-sm text-zinc-600 dark:text-zinc-400">{{ instructor.id }}</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" name="instructors" value="{{ instructor.id }}" class="hidden" id="instructor_{{ instructor.id }}">
+                        </div>
+                    {% empty %}
+                        <div class="col-span-full text-center text-zinc-600 dark:text-zinc-400">
+                            No instructors available to add
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="flex justify-center items-center">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Add Selected Instructors
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filterInstructors(query) {
+        const instructors = document.querySelectorAll('.instructor-item');
+        const lowercaseQuery = query.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        instructors.forEach(instructor => {
+            const name = instructor.querySelector('.instructor-name').textContent.toLowerCase();
+            const id = instructor.querySelector('.instructor-id').textContent.toLowerCase();
+            
+            const isVisible = name.includes(lowercaseQuery) || 
+                            id.includes(lowercaseQuery);
+            
+            instructor.style.display = isVisible ? 'flex' : 'none';
+            if (isVisible) visibleCount++;
+        });
+
+        document.getElementById('instructor-count').textContent = `(${visibleCount})`;
+    }
+
+    function filterAvailableInstructors(query) {
+        const instructors = document.querySelectorAll('.instructor-item');
+        const lowercaseQuery = query.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        instructors.forEach(instructor => {
+            const name = instructor.querySelector('.instructor-name').textContent.toLowerCase();
+            const id = instructor.querySelector('.instructor-id').textContent.toLowerCase();
+            
+            const isVisible = name.includes(lowercaseQuery) || 
+                            id.includes(lowercaseQuery);
+            
+            instructor.style.display = isVisible ? 'flex' : 'none';
+            if (isVisible) visibleCount++;
+        });
+
+        document.getElementById('available-count').textContent = `(${visibleCount})`;
+    }
+    
+    function toggleInstructorSelection(element, id) {
+        const checkbox = document.getElementById('instructor_' + id) || document.getElementById('remove_instructor_' + id);
+        checkbox.checked = !checkbox.checked;
+        
+        if (checkbox.checked) {
+            element.classList.add('border-blue-500');
+            element.classList.remove('border-transparent');
+        } else {
+            element.classList.remove('border-blue-500');
+            element.classList.add('border-transparent');
+        }
+    }
+
+    function confirmRemoveInstructors() {
+        return confirm('Are you sure you want to remove the selected instructors from this section?');
+    }
+
+    // Initialize display on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        filterInstructors('');
+        filterAvailableInstructors('');
+    });
+</script>
+{% endblock %} 

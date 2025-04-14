@@ -606,4 +606,34 @@ class PasswordResetForm(forms.Form):
 
         return cleaned_data
 
+class SectionAddInstructorForm(forms.Form):
+    instructors = forms.ModelMultipleChoiceField(
+        queryset=Users.objects.filter(is_instructor=True),
+        required=True,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'
+        })
+    )
+
+    def __init__(self, *args, section=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.section = section
+        if section:
+            current_instructors = SectionInstructors.objects.filter(section_id=section).values_list('user_id', flat=True)
+            self.fields['instructors'].queryset = Users.objects.filter(is_instructor=True).exclude(id__in=current_instructors)
+
+    def save(self, added_by_user):
+        instructors = self.cleaned_data['instructors']
+        section_instructors = []
+
+        for instructor in instructors:
+            section_instructor = SectionInstructors(
+                user_id=instructor,
+                section_id=self.section
+            )
+            section_instructors.append(section_instructor)
+
+        SectionInstructors.objects.bulk_create(section_instructors)
+        return section_instructors
+
 

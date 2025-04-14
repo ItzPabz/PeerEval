@@ -33,6 +33,7 @@
                 <c-btn_action type="button" label="Manage Students" icon="users-cog" onclick="window.location.href='{% url 'section_add_student' section.id %}'" />
                 <c-btn_action type="button" label="Create Assignment" icon="tasks" onclick="window.location.href='{% url 'section_add_assignment' section.id %}'" />
                 <c-btn_action type="button" label="Manage Groups" icon="users" onclick="window.location.href='{% url 'section_manage_groups' section.id %}'" />
+                <c-btn_action type="button" label="Manage Instructors" icon="chalkboard-teacher" onclick="window.location.href='{% url 'section_manage_instructors' section.id %}'" />
             {% endif %}
             <c-btn_action type="button" label="Export Data" icon="download" onclick="window.location.href='{% url 'export_grades' section.id %}'" />
         </div>

@@ -6,7 +6,7 @@ from functools import wraps
 from src.models import Users, Enrollments, Sections, Assignments, Courses, Evaluations, Departments, SectionInstructors, MeritScores, Terms, Groups
 from django.utils import timezone
 from django.db import models
-from src.forms import CourseForm, InstructorForm, SectionForm, AssignmentForm, StudentForm, SectionAddStudentForm, SectionAddAssignmentForm, GroupFormationMethodForm, PasswordResetRequestForm, PasswordResetForm, LoginForm, AssignmentEditForm
+from src.forms import CourseForm, InstructorForm, SectionForm, AssignmentForm, StudentForm, SectionAddStudentForm, SectionAddAssignmentForm, GroupFormationMethodForm, PasswordResetRequestForm, PasswordResetForm, LoginForm, AssignmentEditForm, SectionAddInstructorForm
 from django.db.models import Q
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.views import LogoutView
@@ -1939,4 +1939,54 @@ def page_not_found(request, exception):
 
 def server_error(request):
     return render(request, '500.html', status=500)
+
+@login_required
+def section_manage_instructors(request, section_id):
+    section = get_object_or_404(Sections, id=section_id)
+    
+    # Check if user has permission to manage this section
+    if not request.user.is_superuser and not SectionInstructors.objects.filter(section_id=section, user_id=request.user).exists():
+        messages.error(request, "You don't have permission to manage instructors for this section.")
+        return redirect('index')
+    
+    current_instructors = SectionInstructors.objects.filter(section_id=section).select_related('user_id')
+    available_instructors = Users.objects.filter(is_instructor=True).exclude(
+        id__in=current_instructors.values_list('user_id__id', flat=True)
+    )
+    
+    if request.method == 'POST':
+        form = SectionAddInstructorForm(request.POST, section=section)
+        if form.is_valid():
+            form.save(request.user)
+            messages.success(request, 'Instructors added successfully.')
+            return redirect('section_manage_instructors', section_id=section.id)
+    else:
+        form = SectionAddInstructorForm(section=section)
+    
+    return render(request, 'instructor/add_forms/section_instructor.html', {
+        'section': section,
+        'current_instructors': current_instructors,
+        'available_instructors': available_instructors,
+        'form': form
+    })
+
+@login_required
+def section_remove_instructors(request, section_id):
+    section = get_object_or_404(Sections, id=section_id)
+    
+    # Check if user has permission to manage this section
+    if not request.user.is_superuser and not SectionInstructors.objects.filter(section_id=section, user_id=request.user).exists():
+        messages.error(request, "You don't have permission to manage instructors for this section.")
+        return redirect('index')
+    
+    if request.method == 'POST':
+        instructor_ids = request.POST.getlist('remove_instructors')
+        if instructor_ids:
+            SectionInstructors.objects.filter(
+                section_id=section,
+                user_id__id__in=instructor_ids
+            ).delete()
+            messages.success(request, 'Instructors removed successfully.')
+    
+    return redirect('section_manage_instructors', section_id=section.id)
 
