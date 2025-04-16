@@ -26,10 +26,10 @@ SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Use secure cookies in production
-SESSION_COOKIE_SECURE = True  
+SESSION_COOKIE_SECURE = False
 
 # Prevent JavaScript from accessing the session cookie
-SESSION_COOKIE_HTTPONLY = True 
+SESSION_COOKIE_HTTPONLY = True
 
 AUTH_USER_MODEL = "src.Users"
 
@@ -47,7 +47,7 @@ LOGIN_URL = 'login'
 SECRET_KEY = 'django-insecure-your-secret-key-here'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -59,14 +59,14 @@ INTERNAL_IPS = [
 
 NPM_BIN_PATH = 'npm.cmd'
 
-# Security Settings
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Security Settings - Disabled for development
+SECURE_HSTS_SECONDS = 0
+SECURE_SSL_REDIRECT = False
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_PROXY_SSL_HEADER = None
 
 # Application definition
 
@@ -78,8 +78,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_cotton',
-    'tailwind',
-    'theme',
     'src',
 ]
 
@@ -120,15 +118,8 @@ WSGI_APPLICATION = 'peereval.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'peereval_db',
-        'USER': 'peereval_user',
-        'PASSWORD': 'your_password_here',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -172,7 +163,7 @@ STATIC_URL = 'static/'
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, 'staticfiles'))
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'theme', 'static'),
+    os.path.join(BASE_DIR, 'src', 'static'),
 ]
 
 # Default primary key field type
