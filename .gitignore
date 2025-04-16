@@ -137,6 +137,11 @@ GitHub.sublime-settings
 !.vscode/extensions.json 
 .history
 
+<<<<<<< HEAD
 # Tailwind binary
 tailwindcss-windows-x64.exe
+=======
+# Django Tailwind #
+node_modules/
+>>>>>>> 2a876db7dfe1b7f20de28b1f4a99d2ccb301b5e6
 
