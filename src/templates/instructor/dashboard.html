@@ -4,56 +4,115 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-4">Instructor Dashboard</h1>
 <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
-    <c-stat_full title="Courses" value="{{ stats.courses.value }}" desc="{{ stats.courses.desc }}" change="{{ stats.courses.change }}" icon="book" />
-    <c-stat_full title="Sections" value="{{ stats.sections.value }}" desc="{{ stats.sections.desc }}" change="{{ stats.sections.change }}" icon="chalkboard-teacher" />
-    <c-stat_full title="Assignments" value="{{ stats.assignments.value }}" desc="{{ stats.assignments.desc }}" change="{{ stats.assignments.change }}" icon="tasks" />
-    <c-stat_full title="Students" value="{{ stats.students.value }}" desc="{{ stats.students.desc }}" change="{{ stats.students.change }}" icon="users" />
-    <c-stat_full title="Evaluations" value="{{ stats.evaluations.value }}" desc="{{ stats.evaluations.desc }}" change="{{ stats.evaluations.change }}" icon="clipboard-check" />
+    <c-stat_full title="Courses" value="{{ stats.courses.value }}" desc="{{ stats.courses.desc }}" />
+    <c-stat_full title="Sections" value="{{ stats.sections.value }}" desc="{{ stats.sections.desc }}" />
+    <c-stat_full title="Assignments" value="{{ stats.assignments.value }}" desc="{{ stats.assignments.desc }}" />
+    <c-stat_full title="Students" value="{{ stats.students.value }}" desc="{{ stats.students.desc }}" />
+    <c-stat_full title="Evaluations" value="{{ stats.evaluations.value }}" desc="{{ stats.evaluations.desc }}" />
 </div>
 
-<div
-    class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
-    <h2 class="text-lg font-bold"> Quick Actions </h2>
-    <div class="flex flex-row gap-2">
-        {% if is_superuser %}
-        <c-btn_action type="button" label="Add Term" icon="calendar-days" onclick="window.location.href='{% url 'add_term' %}'" />
-        <c-btn_action type="button" label="Add Department" icon="building" onclick="window.location.href='{% url 'add_department' %}'" />
-        {%endif%}
-        {% if is_depthead %}
-        <c-btn_action type="button" label="Add Course" icon="book" onclick="window.location.href='{% url 'add_course' %}'" />
-        <c-btn_action type="button" label="Add Instructor" icon="chalkboard-teacher" onclick="window.location.href='{% url 'add_instructor' %}'" />
-        {% endif %}
-        {% if is_coordinator %}
-        <c-btn_action type="button" label="Add Section" icon="chalkboard" onclick="window.location.href='{% url 'add_section' %}'" />
-        {% endif %}
-        {% if is_instructor %}
-        <c-btn_action type="button" label="Add Student" icon="users" onclick="window.location.href='{% url 'add_students' %}'" />
-        {% endif %}
-    </div>
+<div class="join join-vertical lg:join-horizontal w-full mt-4">
+    {% if is_superuser %}
+    <button class="btn join-item flex-1" onclick="window.location.href='{% url 'add_term' %}'">
+        <i class="fas fa-calendar-days"></i>
+        Add Term
+    </button>
+    <button class="btn join-item flex-1" onclick="window.location.href='{% url 'add_department' %}'">
+        <i class="fas fa-building"></i>
+        Add Department
+    </button>
+    {% endif %}
+    {% if is_depthead %}
+    <button class="btn join-item flex-1" onclick="window.location.href='{% url 'add_course' %}'">
+        <i class="fas fa-book"></i>
+        Add Course
+    </button>
+    <button class="btn join-item flex-1" onclick="window.location.href='{% url 'add_instructor' %}'">
+        <i class="fas fa-chalkboard-teacher"></i>
+        Add Instructor
+    </button>
+    {% endif %}
+    {% if is_coordinator %}
+    <button class="btn join-item flex-1" onclick="window.location.href='{% url 'add_section' %}'">
+        <i class="fas fa-chalkboard"></i>
+        Add Section
+    </button>
+    {% endif %}
+    {% if is_instructor %}
+    <button class="btn join-item flex-1" onclick="window.location.href='{% url 'add_students' %}'">
+        <i class="fas fa-users"></i>
+        Add Student
+    </button>
+    {% endif %}
 </div>
 
 
-<div
-    class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
+
+<div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300 w-full mt-4">
     <h2 class="text-lg font-bold">Your {{term.name}} Courses</h2>
     <div class="grid grid-cols-2 gap-4">
         {% for course in active_courses %}
-        <div class="flex flex-col gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+        <div class="flex flex-col gap-2 bg-base-300 p-4 rounded-lg shadow-sm border border-base-300">
             <div class="flex flex-col gap-2">
                 <div class="flex flex-row justify-between items-center">
                     <h3 class="text-lg font-bold truncate">{{ course.department.id }}{{ course.course_code }} {{ course.name }}</h3>
                     <div class="flex flex-row gap-2 items-center">
                         {% if course.coordinator == user %}
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-400 dark:bg-zinc-600 px-2 py-1 rounded-lg">Course Coordinator</span>
+                            <span class="badge">Coordinator</span>
                         {% endif %}
                         {% if is_depthead or course.coordinator == user %}
                         <div class="flex flex-row gap-1">
-                            <a href="{% url 'edit_course' course.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                            <button class="btn btn-square btn-sm" onclick="edit_course_{{course.id}}.showModal()">
                                 <i class="fas fa-edit"></i>
-                            </a>
+                            </button>
+                            <dialog id="edit_course_{{course.id}}" class="modal modal-bottom sm:modal-middle">
+                                <div class="modal-box">
+                                    <h3 class="text-lg font-bold">Edit Course</h3>
+                                    <form method="POST" action="{% url 'edit_course' course.id %}">
+                                        {% csrf_token %}
+                                        <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+                                            <legend class="fieldset-legend">Course Details</legend>
+                                            
+                                            <fieldset class="fieldset">
+                                                {% if departments|length > 1 %}
+                                                <legend class="fieldset-legend">Department</legend>
+                                                <select name="department" class="select select-bordered w-full">
+                                                    {% for department in departments %}
+                                                    <option value="{{ department.id }}" {% if department.id == course.department.id %}selected{% endif %}>{{ department.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                {% else %}
+                                                <input type="hidden" name="department" value="{{ departments.0.id }}" />
+                                                <span class="text-sm">{{ departments.0.name }}</span>
+                                                {% endif %}
+                                            </fieldset>
+
+                                            <label class="label">Course Code</label>
+                                            <input type="text" name="course_code" value="{{ course.course_code }}" class="input input-bordered w-full" />
+
+                                            <label class="label">Course Name</label>
+                                            <input type="text" name="name" value="{{ course.name }}" class="input input-bordered w-full" />
+
+                                            <fieldset class="fieldset">
+                                                <legend class="fieldset-legend">Course Coordinator</legend>
+                                                <select name="coordinator" class="select select-bordered w-full">
+                                                    {% for instructor in instructors %}
+                                                    <option value="{{ instructor.id }}" {% if instructor.id == course.coordinator.id %}selected{% endif %}>{{ instructor.first_name }} {{ instructor.last_name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </fieldset>
+                                        </fieldset>
+
+                                        <div class="modal-action w-full">
+                                            <button type="submit" class="btn btn-primary flex-1">Save Changes</button>
+                                            <button type="button" class="btn flex-1" onclick="edit_course_{{course.id}}.close()">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </dialog>
                             <form method="POST" action="{% url 'delete_course' course.id %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this course?');">
                                 {% csrf_token %}
-                                <button type="submit" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                                <button type="submit" class="btn btn-square btn-sm">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
@@ -65,11 +124,11 @@
             <div class="grid grid-cols-2 gap-2">
                 {% for section in course.active_sections %}
                 <a href="{% url 'section_dashboard' section.id %}">
-                    <div class="flex flex-row justify-between gap-2 bg-zinc-400 dark:bg-zinc-600 p-2 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-600 dark:hover:bg-zinc-500 transition-colors">
+                    <div class="flex flex-row justify-between gap-2 bg-base-100 p-2 rounded-lg shadow-sm border border-base-300 hover:bg-base-200 transition-colors">
                         <div class="flex flex-col">
                             <h4 class="text-md font-bold">Section {{ section.section_number }}</h4>
                             {% if section.sectioninstructors_set.exists %}
-                            <span class="text-xs text-zinc-600 dark:text-zinc-400">
+                            <span class="text-xs text-base-content/70">
                                 Instructor: {{ section.sectioninstructors_set.first.user_id.first_name }} {{ section.sectioninstructors_set.first.user_id.last_name }}
                             </span>
                             {% endif %}
