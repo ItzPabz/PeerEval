@@ -17,10 +17,13 @@
                         <div class="flex items-center">
                             <h3 class="text-lg font-semibold">{{ assignment.section_id.course.department.id }}{{
                                 assignment.section_id.course.course_code }} {{ assignment.name }}</h3>
-                            {% if assignment.is_available %}
-                            <c-stat_ball color="{{ assignment.alert_level }}" />
+                            {% if assignment.is_active %}
+                            <div class="inline-grid *:[grid-area:1/1] ml-2">
+                                <div class="status status-success animate-ping"></div>
+                                <div class="status status-success"></div>
+                            </div>
                             {% else %}
-                            <c-stat_ball color="{{ assignment.alert_level }}" />
+                            <span class="status ml-2"></span>
                             {% endif %}
                         </div>
                         {% if assignment.is_active %}

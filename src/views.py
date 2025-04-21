@@ -62,6 +62,67 @@ def index(request):
             assignment_id__section_id__term__end_date__lt=timezone.now().date()
         ).select_related('assignment_id', 'assignment_id__section_id', 'assignment_id__section_id__course', 'assignment_id__section_id__term')
 
+        # Calculate current term statistics
+        total_students = active_students.count()
+        total_assignments = active_assignments.count()
+        total_evaluations = active_evaluations.count()
+        
+        # Calculate average students per section
+        avg_students_per_section = active_sections.aggregate(
+            avg=models.Avg('student_count')
+        )['avg'] or 0
+        
+        # Calculate average assignments per section
+        avg_assignments_per_section = active_sections.aggregate(
+            avg=models.Avg('assignment_count')
+        )['avg'] or 0
+        
+        # Calculate average evaluations per assignment
+        avg_evaluations_per_assignment = total_assignments and (total_evaluations / total_assignments) or 0
+        
+        # Calculate completion rate for evaluations
+        total_possible_evaluations = sum(
+            section.student_count * section.assignment_count 
+            for section in active_sections
+        )
+        evaluation_completion_rate = total_possible_evaluations and (total_evaluations / total_possible_evaluations * 100) or 0
+
+        # Calculate past term statistics
+        past_total_students = past_students.count()
+        past_total_assignments = Assignments.objects.filter(
+            section_id__in=past_sections
+        ).count()
+        past_total_evaluations = past_evaluations.count()
+        
+        # Calculate past averages
+        past_avg_students_per_section = past_sections.aggregate(
+            avg=models.Avg('student_count')
+        )['avg'] or 0
+        
+        past_avg_assignments_per_section = past_sections.aggregate(
+            avg=models.Avg('assignment_count')
+        )['avg'] or 0
+        
+        # Calculate changes
+        def calculate_change(current, past):
+            if past == 0:
+                return 0
+            return ((current - past) / past) * 100
+
+        student_change = calculate_change(total_students, past_total_students)
+        assignment_change = calculate_change(total_assignments, past_total_assignments)
+        evaluation_change = calculate_change(total_evaluations, past_total_evaluations)
+        avg_students_change = calculate_change(avg_students_per_section, past_avg_students_per_section)
+        avg_assignments_change = calculate_change(avg_assignments_per_section, past_avg_assignments_per_section)
+
+        # Format change strings
+        def format_change(change):
+            if change > 0:
+                return f"↑{change:.1f}% from last term"
+            elif change < 0:
+                return f"↓{abs(change):.1f}% from last term"
+            return "No change from last term"
+
         current_term = active_sections.first().term if active_sections.exists() else None
         if current_term:
             all_active_sections = Sections.objects.filter(
@@ -134,18 +195,44 @@ def index(request):
             'total_sections': active_sections.count() + past_sections.count(),
             'active_students': active_students,
             'past_students': past_students,
-            'total_students': active_students.count() + past_students.count(),
+            'total_students': total_students,
             'active_assignments': active_assignments,
             'instructor_students': all_students,
             'active_evaluations': active_evaluations,
             'past_evaluations': past_evaluations,
-            'total_evaluations': active_evaluations.count() + past_evaluations.count(),
-
+            'total_evaluations': total_evaluations,
             'active_courses': active_courses,
             'past_courses': past_courses,
             'total_courses': active_courses.count() + past_courses.count(),
-
-            'term': current_term or Terms.objects.filter(end_date__gte=timezone.now().date()).order_by('start_date').first()
+            'term': current_term or Terms.objects.filter(end_date__gte=timezone.now().date()).order_by('start_date').first(),
+            # Add statistics to context
+            'stats': {
+                'courses': {
+                    'value': active_courses.count(),
+                    'desc': f'Across {active_sections.count()} sections',
+                    'change': format_change(calculate_change(active_courses.count(), past_courses.count()))
+                },
+                'sections': {
+                    'value': active_sections.count(),
+                    'desc': f'Avg {avg_students_per_section:.1f} students per section',
+                    'change': format_change(calculate_change(active_sections.count(), past_sections.count()))
+                },
+                'assignments': {
+                    'value': total_assignments,
+                    'desc': f'Avg {avg_assignments_per_section:.1f} per section',
+                    'change': format_change(assignment_change)
+                },
+                'students': {
+                    'value': total_students,
+                    'desc': f'Active in {active_sections.count()} sections',
+                    'change': format_change(student_change)
+                },
+                'evaluations': {
+                    'value': total_evaluations,
+                    'desc': f'Completion rate: {evaluation_completion_rate:.1f}%',
+                    'change': format_change(evaluation_change)
+                }
+            }
         }
         return render(request, 'instructor/dashboard.html', context)
     else:
@@ -1222,12 +1309,10 @@ def add_department(request):
     return render(request, 'instructor/add_forms/department.html', {'instructors': instructors})
 
 class CustomLogoutView(LogoutView):
-    template_name = 'registration/logged_out.html'
-    
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
         messages.success(request, 'You have been successfully logged out.')
-        return response
+        return redirect('login')
 
 @login_required
 def export_grades(request, section_id):

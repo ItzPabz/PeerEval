@@ -450,6 +450,7 @@ class StudentForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.is_instructor = False
+        instance.id = self.cleaned_data['id']
         if commit:
             instance.set_password(self.cleaned_data['id'])
             instance.save()

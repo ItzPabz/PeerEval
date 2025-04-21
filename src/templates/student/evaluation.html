@@ -5,10 +5,11 @@
 
     <div class="flex flex-row gap-2 items-center justify-between">
         <h1 class="text-2xl font-bold mb-4">{{ department.id }}{{course.course_code}} {{ assignment.name }}</h1>
-        <div class="flex flex-row gap-2">
-            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
-            <span class="text-zinc-600 dark:text-zinc-400">/</span>
-            <a href="" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Current Assignments</a>
+        <div class="breadcrumbs text-sm">
+            <ul>
+                <li><a href="{% url 'index' %}">Dashboard</a></li>
+                <li><a href="">Current Assignments</a></li>
+            </ul>
         </div>
     </div>
     <form method="POST" action="{% url 'submit_evaluation' department.id course.course_code section_number assignment.id %}" id="evaluationForm">

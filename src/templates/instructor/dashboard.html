@@ -3,18 +3,12 @@
 
 {% block content %}
 <h1 class="text-2xl font-bold mb-4">Instructor Dashboard</h1>
-<div class="flex flex-wrap gap-4">
-    <div
-        class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
-        <h2 class="text-lg font-bold">Your {{term.name}} Statistics</h2>
-        <div class="flex flex-row gap-5 justify-center">
-            <c-stat_full title="Courses" value="{{ active_courses.count }}" icon="book" />
-            <c-stat_full title="Sections" value="{{ active_sections.count }}" icon="chalkboard-teacher" />
-            <c-stat_full title="Assignments" value="{{ active_assignments.count }}" icon="tasks" />
-            <c-stat_full title="Students" value="{{ active_students.count }}" icon="users" />
-            <c-stat_full title="Evaluations" value="{{ active_evaluations.count }}" icon="clipboard-check" />
-        </div>
-    </div>
+<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
+    <c-stat_full title="Courses" value="{{ stats.courses.value }}" desc="{{ stats.courses.desc }}" change="{{ stats.courses.change }}" icon="book" />
+    <c-stat_full title="Sections" value="{{ stats.sections.value }}" desc="{{ stats.sections.desc }}" change="{{ stats.sections.change }}" icon="chalkboard-teacher" />
+    <c-stat_full title="Assignments" value="{{ stats.assignments.value }}" desc="{{ stats.assignments.desc }}" change="{{ stats.assignments.change }}" icon="tasks" />
+    <c-stat_full title="Students" value="{{ stats.students.value }}" desc="{{ stats.students.desc }}" change="{{ stats.students.change }}" icon="users" />
+    <c-stat_full title="Evaluations" value="{{ stats.evaluations.value }}" desc="{{ stats.evaluations.desc }}" change="{{ stats.evaluations.change }}" icon="clipboard-check" />
 </div>
 
 <div

@@ -76,7 +76,10 @@
                     <div class="flex flex-col">
                         <div class="flex items-center">
                             <h3 class="text-md font-bold truncate">{{ assignment.name }}</h3>
-                            <c-stat_ball color="green" />
+                            <div class="inline-grid *:[grid-area:1/1]">
+                                <div class="status status-success animate-ping"></div>
+                                <div class="status status-success"></div>
+                            </div>
                         </div>
                         <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</span>
                         <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</span>
