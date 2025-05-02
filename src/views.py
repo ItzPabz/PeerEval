@@ -146,30 +146,6 @@ def index(request):
         ).select_related('user_id').order_by('user_id__last_name', 'user_id__first_name')
 
         context = {
-            'user': current_user,
-            'is_depthead': is_depthead,
-            'department': department,
-            'is_coordinator': is_coordinator,
-            'courses_coordinated': courses_coordinated,
-            'is_instructor': is_instructor,
-            'sections_instructed': sections_instructed,
-            'is_superuser': is_superuser,
-            'active_sections': active_sections,
-            'past_sections': past_sections,
-            'total_sections': active_sections.count() + past_sections.count(),
-            'active_students': active_students,
-            'past_students': past_students,
-            'total_students': total_students,
-            'active_assignments': active_assignments,
-            'instructor_students': all_students,
-            'active_evaluations': active_evaluations,
-            'past_evaluations': past_evaluations,
-            'total_evaluations': total_evaluations,
-            'active_courses': active_courses,
-            'past_courses': past_courses,
-            'total_courses': active_courses.count() + past_courses.count(),
-            'term': current_term or Terms.objects.filter(end_date__gte=timezone.now().date()).order_by('start_date').first(),
-            # Add statistics to context
             'stats': {
                 'courses': {
                     'value': active_courses.count(),
@@ -191,6 +167,21 @@ def index(request):
                     'value': total_evaluations,
                     'desc': f'Completion rate: {evaluation_completion_rate:.1f}%'
                 }
+            },
+            'active_courses': active_courses,
+            'past_courses': past_courses,
+            'is_superuser': is_superuser,
+            'is_depthead': is_depthead,
+            'is_coordinator': is_coordinator,
+            'is_instructor': is_instructor,
+            'instructor_students': all_students,
+            'departments': Departments.objects.all().order_by('name'),
+            'instructors': Users.objects.filter(is_instructor=True).order_by('last_name', 'first_name'),
+            'terms': Terms.objects.filter(end_date__gte=timezone.now().date()).order_by('start_date'),
+            'courses': courses_coordinated if is_coordinator else Courses.objects.none(),
+            'department_prefixes': {
+                'pattern': '|'.join(Departments.objects.values_list('id', flat=True)),
+                'display': ', '.join(Departments.objects.values_list('id', flat=True))
             }
         }
         return render(request, 'instructor/dashboard.html', context)
@@ -720,7 +711,7 @@ def add_instructor(request):
         form = InstructorForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.info(request, 'Instructor added successfully!')
+            messages.info(request, f'Instructor {form.cleaned_data["first_name"]} {form.cleaned_data["last_name"]} added successfully!')
             return redirect('index')
     else:
         form = InstructorForm()
@@ -743,7 +734,7 @@ def add_section(request):
         form = SectionForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.info(request, 'Section added successfully!')
+            messages.info(request, f'Section {form.cleaned_data["term"]} {form.cleaned_data["course"].department.dept_id}{form.cleaned_data["course"].course_code}-{form.cleaned_data["section_id"]} added successfully!')
             return redirect('index')
         else:
             for field, errors in form.errors.items():
@@ -1817,9 +1808,11 @@ def login(request):
             if user.last_login is None:
                 request.session['reset_user_id'] = user.id
                 auth_login(request, user)
+                messages.warning(request, 'Please set a password to continue.')
                 return redirect('password_reset')
             else:
                 auth_login(request, user)
+                messages.success(request, 'Login successful.')
                 return redirect('index')
         else:
             messages.error(request, 'Invalid username or password')
