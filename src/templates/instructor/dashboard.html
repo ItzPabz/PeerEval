@@ -46,7 +46,6 @@
     {% endif %}
 </div>
 
-<!-- Add Term Modal -->
 <dialog id="add_term_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Add Term</h3>
@@ -73,7 +72,6 @@
     </div>
 </dialog>
 
-<!-- Add Department Modal -->
 <dialog id="add_department_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Add Department</h3>
@@ -105,7 +103,6 @@
     </div>
 </dialog>
 
-<!-- Add Course Modal -->
 <dialog id="add_course_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Add Course</h3>
@@ -155,7 +152,6 @@
     </div>
 </dialog>
 
-<!-- Add Instructor Modal -->
 <dialog id="add_instructor_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Add Instructor</h3>
@@ -185,7 +181,6 @@
     </div>
 </dialog>
 
-<!-- Add Section Modal -->
 <dialog id="add_section_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Add Section</h3>
@@ -202,12 +197,12 @@
                 </select>
                 
                 <label class="label">Section Number</label>
-                <input type="number" name="section_number" class="input input-bordered w-full" required />
+                <input type="text" name="section_number" class="input input-bordered w-full" required />
                 
                 <label class="label">Term</label>
                 <select name="term" class="select select-bordered w-full" required>
                     {% for term in terms %}
-                    <option value="{{ term.id }}">{{ term.name }}</option>
+                        <option value="{{ term.id }}">{{ term.name }}</option>
                     {% endfor %}
                 </select>
                 
@@ -220,14 +215,13 @@
             </fieldset>
 
             <div class="modal-action w-full">
-                <button type="submit" class="btn btn-primary flex-1">Add Section</button>
                 <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('add_section_modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary flex-1">Add Section</button>
             </div>
         </form>
     </div>
 </dialog>
 
-<!-- Add Student Modal -->
 <dialog id="add_student_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Add Student</h3>
@@ -245,8 +239,8 @@
                 <label class="label">Last Name</label>
                 <input type="text" name="last_name" class="input input-bordered w-full" required />
                 
-                <label class="label">Email</label>
-                <input type="email" name="email" class="input input-bordered w-full" required />
+                <label class="label">ID</label>
+                <input type="text" name="id" class="input input-bordered w-full" required />
             </fieldset>
 
             <div class="modal-action w-full">
@@ -259,6 +253,7 @@
 
 <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300 w-full mt-4">
     <h2 class="text-lg font-bold">Your {{term.name}} Courses</h2>
+    {% if active_courses %}
     <div class="grid grid-cols-2 gap-4">
         {% for course in active_courses %}
         <div class="flex flex-col gap-2 bg-base-300 p-4 rounded-lg shadow-sm border border-base-300">
@@ -267,11 +262,11 @@
                     <h3 class="text-lg font-bold truncate">{{ course.department.id }}{{ course.course_code }} {{ course.name }}</h3>
                     <div class="flex flex-row gap-2 items-center">
                         {% if course.coordinator == user %}
-                            <span class="badge">Coordinator</span>
+                            <span class="badge badge-primary">Coordinator</span>
                         {% endif %}
                         {% if is_depthead or course.coordinator == user %}
                         <div class="flex flex-row gap-1">
-                            <button class="btn btn-square btn-sm" onclick="document.getElementById('edit_course_{{course.id}}').showModal()">
+                            <button class="btn btn-neutral btn-square btn-sm" onclick="document.getElementById('edit_course_{{course.id}}').showModal()">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <dialog id="edit_course_{{course.id}}" class="modal modal-bottom sm:modal-middle">
@@ -321,7 +316,7 @@
                             </dialog>
                             <form method="POST" action="{% url 'delete_course' course.id %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this course?');">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-square btn-sm">
+                                <button type="submit" class="btn btn-square btn-error btn-sm">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
@@ -337,12 +332,12 @@
                         <div class="flex flex-col">
                             <h4 class="text-md font-bold">Section {{ section.section_number }}</h4>
                             {% if section.sectioninstructors_set.exists %}
-                            <span class="text-xs text-base-content/70">
+                            <span class="text-xs text-base-content/70 hidden sm:block">
                                 Instructor: {{ section.sectioninstructors_set.first.user_id.first_name }} {{ section.sectioninstructors_set.first.user_id.last_name }}
                             </span>
                             {% endif %}
                         </div>
-                        <div class="flex flex-row gap-2">
+                        <div class="flex flex-row gap-2 hidden sm:flex">
                             <c-stat_mini icon="users" value="{{ section.student_count }}" title="Students" />
                             <c-stat_mini icon="tasks" value="{{ section.assignment_count }}" title="Assignments" />
                         </div>
@@ -353,47 +348,59 @@
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+        <p class="text-base-content/50 text-lg">No active courses found</p>
+    </div>
+    {% endif %}
 </div>
 
-<div
-    class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
-    <h2 class="text-lg font-bold">Past Courses</h2>
+{% if past_terms %}
+<div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300 w-full mt-4">
+    <h2 class="text-lg font-bold">Past Terms</h2>
     <div class="flex flex-row gap-2">
-        <input type="text" id="past-section-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search by course name, code, term, or section number" oninput="filterPastSections(this.value)" />
+        <input type="text" id="past-section-search" class="input input-bordered w-full" placeholder="Search by course name, code, term" oninput="filterPastSections(this.value)" />
     </div>
-    <div class="grid grid-cols-2 gap-4" id="past-sections-grid">
-        {% for course in past_courses %}
-        <div class="term-card flex flex-col gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+    <div class="flex flex-col gap-4" id="past-sections-grid">
+        {% for term in past_terms %}
+        <div class="term-card flex flex-col gap-2 bg-base-100 p-4 rounded-lg shadow-sm border border-base-300">
             <div class="flex flex-col gap-2">
                 <div class="flex flex-row justify-between items-center">
-                    <h3 class="text-lg font-bold truncate">{{ course.department.id }}{{ course.course_code }} {{ course.name }}</h3>
+                    <h3 class="text-lg font-bold truncate">{{ term.name }}</h3>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                {% for section in course.past_sections %}
-                <a href="{% url 'section_dashboard' section.id %}" class="past-section-card">
-                    <div class="flex flex-row justify-between gap-2 bg-zinc-400 dark:bg-zinc-600 p-2 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-500 dark:hover:bg-zinc-500 transition-colors">
-                        <div class="flex flex-col">
-                            <h4 class="text-md font-bold">Section {{ section.section_number }}</h4>
-                            <span class="text-xs text-zinc-600 dark:text-zinc-400">{{ section.term.name }}</span>
-                        </div>
-                        <div class="flex flex-row gap-2">
-                            <c-stat_mini icon="users" value="{{ section.student_count }}" title="Students" />
-                            <c-stat_mini icon="tasks" value="{{ section.assignment_count }}" title="Assignments" />
-                        </div>
+            <div class="flex flex-col gap-4">
+                {% for course in term.courses %}
+                <div class="course-card flex flex-col gap-2">
+                    <h4 class="text-md font-bold">{{ course.department.id }}{{ course.course_code }} - {{ course.name }}</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                        {% for section in course.term_sections %}
+                        <a href="{% url 'section_dashboard' section.id %}" class="past-section-card">
+                            <div class="flex flex-row justify-between gap-2 bg-base-300 p-2 rounded-lg shadow-sm border border-base-300 hover:bg-base-200 transition-colors">
+                                <div class="flex flex-col">
+                                    <h4 class="text-md font-bold">Section {{ section.section_number }}</h4>
+                                </div>
+                                <div class="flex flex-row gap-2">
+                                    <c-stat_mini icon="users" value="{{ section.student_count }}" title="Students" />
+                                    <c-stat_mini icon="tasks" value="{{ section.assignment_count }}" title="Assignments" />
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
                     </div>
-                </a>
+                </div>
                 {% endfor %}
             </div>
         </div>
         {% endfor %}
     </div>
-    <div class="flex justify-center items-center gap-4 mt-4">
-        <button id="prevPastPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+    <div id="pagination-controls" class="flex justify-center items-center gap-4 mt-4">
+        <button id="prevPastPage" class="btn btn-neutral w-24" disabled>Previous</button>
         <span class="text-sm"><span id="currentPastPage">1</span> / <span id="totalPastPages">1</span></span>
-        <button id="nextPastPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+        <button id="nextPastPage" class="btn btn-neutral w-24" disabled>Next</button>
     </div>
 </div>
+{% endif %}
 
 <script>
     let currentPastPage = 1;
@@ -402,30 +409,41 @@
     function filterPastSections(query) {
         const sections = document.querySelectorAll('.past-section-card');
         const termCards = document.querySelectorAll('.term-card');
+        const courseCards = document.querySelectorAll('.course-card');
         const lowercaseQuery = query.toLowerCase().trim();
         
         termCards.forEach(termCard => {
-            let hasVisibleSections = false;
-            const sectionsInTerm = termCard.querySelectorAll('.past-section-card');
+            let hasVisibleContent = false;
+            const coursesInTerm = termCard.querySelectorAll('.course-card');
+            const termName = termCard.querySelector('h3').textContent.toLowerCase();
             
-            sectionsInTerm.forEach(section => {
-                const courseCode = section.querySelector('h4').textContent.toLowerCase();
-                const termName = section.querySelector('.text-xs').textContent.toLowerCase();
-                const instructor = section.querySelectorAll('.text-xs')[1]?.textContent.toLowerCase() || '';
+            coursesInTerm.forEach(courseCard => {
+                let hasVisibleSections = false;
+                const sectionsInCourse = courseCard.querySelectorAll('.past-section-card');
+                const courseName = courseCard.querySelector('h4').textContent.toLowerCase();
                 
-                const isVisible = courseCode.includes(lowercaseQuery) || 
-                                termName.includes(lowercaseQuery) ||
-                                instructor.includes(lowercaseQuery);
+                sectionsInCourse.forEach(section => {
+                    const sectionNumber = section.querySelector('h4').textContent.toLowerCase();
+                    const isVisible = courseName.includes(lowercaseQuery) || 
+                                    termName.includes(lowercaseQuery);
+                    
+                    if (isVisible) {
+                        section.dataset.filtered = 'true';
+                        hasVisibleSections = true;
+                    } else {
+                        section.dataset.filtered = 'false';
+                    }
+                });
                 
-                if (isVisible) {
-                    section.dataset.filtered = 'true';
-                    hasVisibleSections = true;
+                if (hasVisibleSections) {
+                    courseCard.dataset.filtered = 'true';
+                    hasVisibleContent = true;
                 } else {
-                    section.dataset.filtered = 'false';
+                    courseCard.dataset.filtered = 'false';
                 }
             });
             
-            termCard.dataset.filtered = hasVisibleSections ? 'true' : 'false';
+            termCard.dataset.filtered = hasVisibleContent ? 'true' : 'false';
         });
 
         currentPastPage = 1;
@@ -450,10 +468,20 @@
         document.getElementById('totalPastPages').textContent = pageCount || 1;
         document.getElementById('prevPastPage').disabled = page === 1;
         document.getElementById('nextPastPage').disabled = page === pageCount || pageCount === 0;
+        
+        // Show/hide pagination controls based on page count
+        const paginationControls = document.getElementById('pagination-controls');
+        paginationControls.style.display = pageCount <= 1 ? 'none' : 'flex';
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.term-card').forEach(card => {
+            card.dataset.filtered = 'true';
+        });
+        document.querySelectorAll('.course-card').forEach(card => {
+            card.dataset.filtered = 'true';
+        });
+        document.querySelectorAll('.past-section-card').forEach(card => {
             card.dataset.filtered = 'true';
         });
 
@@ -478,10 +506,10 @@
 </script>
 
 {% if instructor_students %}
-<div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 mt-4">
+<div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300 w-full mt-4">
     <h2 class="text-lg font-bold">Student List <span id="student-count" class="text-sm font-normal">({{ instructor_students|length }})</span></h2>
     <div class="flex flex-row gap-2">
-        <input type="text" id="student-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search for a student by name or ID" oninput="filterStudents(this.value)" />
+        <input type="text" id="student-search" class="input input-bordered w-full" placeholder="Search for a student by name or ID" oninput="filterStudents(this.value)" />
     </div>
     <script>
         let currentPage = 1;
@@ -494,10 +522,12 @@
             
             students.forEach(student => {
                 const name = student.querySelector('.student-name').textContent.toLowerCase();
-                const id = student.querySelector('.student-id').textContent.toLowerCase();
+                const id = student.querySelector('.badge-outline').textContent.toLowerCase();
+                const username = student.querySelector('.fa-user + span').textContent.toLowerCase();
                 
                 const isVisible = name.includes(lowercaseQuery) || 
-                                id.includes(lowercaseQuery);
+                                id.includes(lowercaseQuery) ||
+                                username.includes(lowercaseQuery);
                 
                 if (isVisible) {
                     student.dataset.filtered = 'true';
@@ -522,7 +552,7 @@
 
             filteredStudents.forEach((student, index) => {
                 if (index >= (page - 1) * itemsPerPage && index < page * itemsPerPage) {
-                    student.style.display = 'flex';
+                    student.style.display = 'block';
                 }
             });
             
@@ -530,6 +560,10 @@
             document.getElementById('totalPages').textContent = pageCount || 1;
             document.getElementById('prevPage').disabled = page === 1;
             document.getElementById('nextPage').disabled = page === pageCount || pageCount === 0;
+            
+            // Show/hide pagination controls based on page count
+            const paginationControls = document.getElementById('pagination-controls');
+            paginationControls.style.display = pageCount <= 1 ? 'none' : 'flex';
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -556,24 +590,37 @@
             showPage(1);
         });
     </script>
-    <div class="grid grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {% for student in instructor_students %}
             {% ifchanged student.user_id.id %}
-            <a href="{% url 'student_profile' student.user_id.username %}" class="student-card flex flex-col justify-center items-center bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors">
-                <div class="flex flex-col text-center items-center w-full">
-                    <h3 class="student-name text-lg font-bold truncate max-w-full w-full">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>  
-                    <div class="flex flex-row gap-2 items-center">
-                        <span class="student-id text-sm text-zinc-600 dark:text-zinc-400">{{ student.user_id.id }}</span>
+            <a href="{% url 'student_profile' student.user_id.username %}" class="student-card card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200">
+                <div class="card-body p-4 pt-3 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="flex flex-col gap-2 relative z-10">
+                        <div class="flex items-center justify-between -mt-1">
+                            <h3 class="student-name card-title text-lg font-bold truncate m-0">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                <i class="fas fa-user"></i>
+                                <span>{{ student.user_id.username }}</span>
+                            </div>
+                            <div class="badge badge-outline badge-sm font-mono">{{ student.user_id.id }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
             {% endifchanged %}
         {% endfor %}
     </div>
-    <div class="flex justify-center items-center gap-4 mt-4">
-        <button id="prevPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
-        <span class="text-sm"><span id="currentPage">1</span> / <span id="totalPages">1</span></span>
-        <button id="nextPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+    <div id="pagination-controls" class="flex justify-center items-center gap-4 mt-4">
+        <div class="join">
+            <button id="prevPage" class="join-item btn btn-neutral" disabled>«</button>
+            <button class="join-item btn btn-neutral">
+                <span id="currentPage">1</span> / <span id="totalPages">1</span>
+            </button>
+            <button id="nextPage" class="join-item btn btn-neutral" disabled>»</button>
+        </div>
     </div>
 </div>
 {% endif %}

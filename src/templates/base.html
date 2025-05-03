@@ -11,7 +11,7 @@
 	<link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 	<script>
-		const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'business' : 'light');
+		const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'business' : 'corporate');
 		document.documentElement.setAttribute('data-theme', theme);
 	</script>
 </head>
@@ -26,7 +26,7 @@
 		<div class="flex-none gap-2">
 			<label class="swap swap-rotate btn btn-square btn-ghost">
 				<input type="checkbox" id="theme-toggle" onchange="
-					const theme = this.checked ? 'light' : 'business';
+					const theme = this.checked ? 'corporate' : 'business';
 					document.documentElement.setAttribute('data-theme', theme);
 					localStorage.setItem('theme', theme);
 				"/>
@@ -64,19 +64,16 @@
 	</footer>
 
 	{% if messages %}
-	<div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 space-y-2 w-auto max-w-screen-sm px-4">
+	<div class="toast toast-top toast-center">
 		{% for message in messages %}
-		<div role="alert" class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% endif %}">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 stroke-current">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-			</svg>
+		<div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% endif %}">
 			<span>{{ message }}</span>
 		</div>
 		{% endfor %}
 	</div>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
-			const messages = document.querySelectorAll('[role="alert"]');
+			const messages = document.querySelectorAll('.alert');
 			messages.forEach(message => {
 				setTimeout(() => {
 					message.classList.add('opacity-0');

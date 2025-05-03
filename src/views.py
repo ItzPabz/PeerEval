@@ -6,7 +6,7 @@ from functools import wraps
 from src.models import Users, Enrollments, Sections, Assignments, Courses, Evaluations, Departments, SectionInstructors, MeritScores, Terms, Groups
 from django.utils import timezone
 from django.db import models
-from src.forms import CourseForm, InstructorForm, SectionForm, AssignmentForm, StudentForm, SectionAddStudentForm, SectionAddAssignmentForm, GroupFormationMethodForm, PasswordResetRequestForm, PasswordResetForm, LoginForm, AssignmentEditForm, SectionAddInstructorForm
+from src.forms import CourseForm, InstructorForm, SectionForm, AssignmentForm, StudentForm, SectionAddStudentForm, SectionAddAssignmentForm, GroupFormationMethodForm, PasswordResetRequestForm, PasswordResetForm, LoginForm, AssignmentEditForm, SectionAddInstructorForm, TermForm
 from django.db.models import Q
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.views import LogoutView
@@ -118,15 +118,29 @@ def index(request):
         else:
             active_courses = Courses.objects.none()
 
-        past_courses = Courses.objects.filter(
-            sections__in=past_sections
-        ).prefetch_related(
-            models.Prefetch(
-                'sections',
-                queryset=past_sections,
-                to_attr='past_sections'
-            )
-        ).select_related('department').distinct()
+        # Get past terms and organize courses by term
+        past_terms = Terms.objects.filter(
+            end_date__lt=timezone.now().date()
+        ).order_by('-end_date')
+
+        past_terms_data = []
+        for term in past_terms:
+            term_sections = past_sections.filter(term=term)
+            term_courses = Courses.objects.filter(
+                sections__in=term_sections
+            ).prefetch_related(
+                models.Prefetch(
+                    'sections',
+                    queryset=term_sections,
+                    to_attr='term_sections'
+                )
+            ).select_related('department').distinct()
+            
+            if term_courses.exists():
+                past_terms_data.append({
+                    'name': term.name,
+                    'courses': term_courses
+                })
 
         is_depthead = Departments.objects.filter(department_head=current_user.id).exists()
         try:
@@ -169,7 +183,7 @@ def index(request):
                 }
             },
             'active_courses': active_courses,
-            'past_courses': past_courses,
+            'past_terms': past_terms_data,
             'is_superuser': is_superuser,
             'is_depthead': is_depthead,
             'is_coordinator': is_coordinator,
@@ -466,6 +480,11 @@ def section_dashboard(request, section_id):
         assignment_id__section_id=section
     ).count()
     
+    # Calculate stats descriptions
+    active_assignments = sum(1 for a in assignments if a.is_active)
+    upcoming_assignments = sum(1 for a in assignments if a.available_date > now)
+    past_assignments = sum(1 for a in assignments if a.due_date < now)
+    
     context = {
         'section': section,
         'students': students,
@@ -475,7 +494,29 @@ def section_dashboard(request, section_id):
         'is_coordinator': is_coordinator,
         'term': section.term,
         'evaluations': total_evaluations,
-        'current_date': timezone.now().date()
+        'current_date': timezone.now().date(),
+        'stats': {
+            'term': {
+                'value': section.term.name,
+                'desc': f'{section.term.start_date} to {section.term.end_date}'
+            },
+            'instructor': {
+                'value': f'{current_user.first_name} {current_user.last_name}',
+                'desc': 'Primary instructor'
+            },
+            'students': {
+                'value': students.count(),
+                'desc': f'Enrolled in {section.course.department.id}{section.course.course_code}-{section.section_number}'
+            },
+            'assignments': {
+                'value': assignments.count(),
+                'desc': f'{active_assignments} active, {upcoming_assignments} upcoming, {past_assignments} past'
+            },
+            'evaluations': {
+                'value': total_evaluations,
+                'desc': f'Total peer evaluations submitted'
+            }
+        }
     }
     
     return render(request, 'instructor/section_dashboard.html', context)
@@ -678,32 +719,25 @@ def add_course(request):
         if form.is_valid():
             try:
                 course = form.save()
-                messages.success(request, f'Course {course.department.id}{course.course_code} - {course.name} added successfully.')
+                if hasattr(form, 'coordinator_assigned'):
+                    coordinator_name = "You" if form.existing_course.coordinator == request.user else f"{form.existing_course.coordinator.first_name} {form.existing_course.coordinator.last_name}"
+                    messages.success(request, f'Course {form.existing_course.department.id}{form.existing_course.course_code} already exists. {coordinator_name} have been assigned as the coordinator.')
+                    if form.existing_course.name != form.cleaned_data['name']:
+                        messages.info(request, f'Course name has been updated to: {form.existing_course.name}')
+                else:
+                    messages.success(request, f'Course {course.department.id}{course.course_code} - {course.name} added successfully.')
                 return redirect('index')
             except Exception as e:
-                if 'already exists' in str(e):
-                    messages.error(request, f'A course with department {form.cleaned_data["department"].id} and course code {form.cleaned_data["course_code"]} already exists.')
-                else:
-                    messages.error(request, f'Error adding course: {str(e)}')
+                messages.error(request, f'Error adding course: {str(e)}')
         else:
             for field, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"{field.title()}: {error}")
-    else:
-        form = CourseForm()
-        
-    departments = Departments.objects.all().order_by('name')
-    instructors = Users.objects.filter(is_instructor=True).order_by('last_name', 'first_name')
-    
-    form.fields['department'].queryset = departments
-    form.fields['coordinator'].queryset = instructors
-    
-    context = {
-        'form': form,
-        'departments': departments,
-        'instructors': instructors
-    }
-    return render(request, 'instructor/add_forms/course.html', context)
+                    if field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        messages.error(request, f"{field.title()}: {error}")
+        return redirect('index')
+    return redirect('index')
 
 @login_required
 def add_instructor(request):
@@ -711,7 +745,7 @@ def add_instructor(request):
         form = InstructorForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.info(request, f'Instructor {form.cleaned_data["first_name"]} {form.cleaned_data["last_name"]} added successfully!')
+            messages.success(request, f'Instructor {form.cleaned_data["first_name"]} {form.cleaned_data["last_name"]} added successfully!')
             return redirect('index')
     else:
         form = InstructorForm()
@@ -734,30 +768,16 @@ def add_section(request):
         form = SectionForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.info(request, f'Section {form.cleaned_data["term"]} {form.cleaned_data["course"].department.dept_id}{form.cleaned_data["course"].course_code}-{form.cleaned_data["section_id"]} added successfully!')
+            messages.info(request, f'Section {form.cleaned_data["term"]} {form.cleaned_data["course"].department.id}{form.cleaned_data["course"].course_code}-{form.cleaned_data["section_number"]} added successfully!')
             return redirect('index')
         else:
             for field, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"{field.title()}: {error}")
-    else:
-        form = SectionForm()
-        
-    courses = Courses.objects.filter(coordinator=current_user).order_by('department__name', 'course_code')
-    terms = Terms.objects.filter(end_date__gte=timezone.now().date()).order_by('start_date')
-    instructors = Users.objects.filter(is_instructor=True).order_by('last_name', 'first_name')
-    
-    form.fields['course'].queryset = courses
-    form.fields['term'].queryset = terms
-    form.fields['instructor'].queryset = instructors
-    
-    context = {
-        'form': form,
-        'courses': courses,
-        'terms': terms,
-        'instructors': instructors
-    }
-    return render(request, 'instructor/add_forms/section.html', context)
+                    if field == '__all__':
+                        messages.error(request, f'Section {form.cleaned_data["section_number"]} in {form.cleaned_data["course"].department.id}{form.cleaned_data["course"].course_code} already exists for {form.cleaned_data["term"]}.')
+                    else:
+                        messages.error(request, f"{field.title()}: {error}")
+    return redirect('index')
 
 @login_required
 def add_assignment(request):
@@ -1196,27 +1216,20 @@ def add_term(request):
         return redirect('index')
         
     if request.method == 'POST':
-        name = request.POST.get('name')
-        start_date = request.POST.get('start_date')
-        end_date = request.POST.get('end_date')
-        
-        if not name or not start_date or not end_date:
-            messages.error(request, 'All fields are required.')
-            return render(request, 'instructor/add_forms/term.html')
-            
-        try:
-            term = Terms.objects.create(
-                name=name,
-                start_date=start_date,
-                end_date=end_date
-            )
+        form = TermForm(request.POST)
+        if form.is_valid():
+            term = form.save()
             messages.success(request, f'Term {term.name} has been added successfully.')
-            return redirect('index')
-        except Exception as e:
-            messages.error(request, f'Error adding term: {str(e)}')
-            return render(request, 'instructor/add_forms/term.html')
-    
-    return render(request, 'instructor/add_forms/term.html')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == 'name':
+                        messages.error(request, 'A term with this name already exists.')
+                    elif field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        messages.error(request, f"{field.title()}: {error}")
+    return redirect('index')
 
 @login_required
 def add_department(request):
@@ -1245,13 +1258,29 @@ def add_department(request):
             department_head = None
             
         try:
-            department = Departments.objects.create(
-                id=dept_id.upper(),
-                name=name,
-                department_head=department_head
-            )
-            messages.success(request, f'Department {department.name} ({department.id}) has been added successfully.')
-            return redirect('index')
+            try:
+                existing_dept = Departments.objects.get(id=dept_id.upper())
+                if existing_dept.department_head is None:
+                    existing_dept.department_head = department_head
+                    if existing_dept.name != name:
+                        existing_dept.name = name
+                        existing_dept.save()
+                        messages.success(request, f'Department {existing_dept.id} already exists. You have been assigned as the department head.')
+                        messages.info(request, f'Department name has been updated to: {existing_dept.name}')
+                    else:
+                        existing_dept.save()
+                        messages.success(request, f'Department {existing_dept.id} already exists. You have been assigned as the department head.')
+                else:
+                    messages.error(request, f'Department {existing_dept.id} already exists in the system. {existing_dept.department_head.first_name} {existing_dept.department_head.last_name} is the current department head.')
+                return redirect('index')
+            except Departments.DoesNotExist:
+                department = Departments.objects.create(
+                    id=dept_id.upper(),
+                    name=name,
+                    department_head=department_head
+                )
+                messages.success(request, f'Department {department.name} ({department.id}) has been added successfully.')
+                return redirect('index')
         except Exception as e:
             messages.error(request, f'Error adding department: {str(e)}')
             return render(request, 'instructor/add_forms/department.html', {'instructors': instructors})
@@ -1418,7 +1447,6 @@ def import_wizard(request, section_id):
                 messages.error(request, f'CSV file must contain the following columns: {", ".join(required_fields)}')
                 return redirect('import_wizard', section_id=section_id)
 
-            # Find group column
             group_column = None
             for col in csv_reader.fieldnames:
                 if 'group' in col.lower():
@@ -1697,7 +1725,11 @@ def section_student(request, section_id):
         id__in=enrolled_students_list.values_list('user_id', flat=True)
     ).order_by('last_name', 'first_name')
     
-    enrolled_paginator = Paginator(enrolled_students_list, 10)
+    # Get items per page from request or use default
+    enrolled_per_page = int(request.GET.get('enrolled_per_page', 16))  # Default to 16 for xl screens
+    per_page = int(request.GET.get('per_page', 16))  # Default to 16 for xl screens
+    
+    enrolled_paginator = Paginator(enrolled_students_list, enrolled_per_page)
     try:
         enrolled_page = int(request.GET.get('enrolled_page', 1))
         enrolled_students = enrolled_paginator.page(enrolled_page)
@@ -1705,6 +1737,15 @@ def section_student(request, section_id):
         enrolled_students = enrolled_paginator.page(1)
     except EmptyPage:
         enrolled_students = enrolled_paginator.page(enrolled_paginator.num_pages)
+    
+    available_paginator = Paginator(available_students, per_page)
+    try:
+        page = int(request.GET.get('page', 1))
+        paginated_students = available_paginator.page(page)
+    except (PageNotAnInteger, ValueError):
+        paginated_students = available_paginator.page(1)
+    except EmptyPage:
+        paginated_students = available_paginator.page(available_paginator.num_pages)
     
     if request.method == 'POST':
         if 'students' in request.POST:
@@ -1723,7 +1764,7 @@ def section_student(request, section_id):
     context = {
         'section': section,
         'enrolled_students': enrolled_students,
-        'paginated_students': available_students,
+        'paginated_students': paginated_students,
         'BRIGHTSPACE_ENABLED': settings.BRIGHTSPACE_ENABLED,
         'total_enrolled': enrolled_students_list.count(),
         'total_available': available_students.count()
@@ -1812,7 +1853,7 @@ def login(request):
                 return redirect('password_reset')
             else:
                 auth_login(request, user)
-                messages.success(request, 'Login successful.')
+                messages.success(request, f'Welcome back {user.first_name}!')
                 return redirect('index')
         else:
             messages.error(request, 'Invalid username or password')
@@ -1845,7 +1886,7 @@ def edit_assignment(request, assignment_id):
         if form.is_valid():
             form.save()
             messages.success(request, 'Assignment updated successfully.')
-            return redirect('view_assignment', assignment_id=assignment.id)
+            return redirect('section_dashboard', section_id=section.id)
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -1859,7 +1900,7 @@ def edit_assignment(request, assignment_id):
         'section': section
     }
     
-    return render(request, 'instructor/add_forms/edit_assignment.html', context)
+    return redirect('section_dashboard', section_id=section.id)
 
 @login_required
 def edit_course(request, course_id):

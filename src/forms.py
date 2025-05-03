@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 from src.models import Users, Evaluations, MeritScores, Assignments, Courses, Departments, Sections, SectionInstructors, Terms, Enrollments, Groups
+from django.db import models
 
 class LoginForm(forms.Form):
     username = forms.CharField(
@@ -182,11 +183,21 @@ class CourseForm(forms.ModelForm):
             try:
                 existing_course = Courses.objects.get(department=department, course_code=course_code)
                 if existing_course.id != self.instance.id:
-                    raise ValidationError('Course with this department and course code already exists')
+                    if existing_course.coordinator is None:
+                        existing_course.coordinator = coordinator
+                        existing_course.name = name
+                        existing_course.save()
+                        self.coordinator_assigned = True
+                        self.existing_course = existing_course
+                    else:
+                        coordinator = existing_course.coordinator
+                        raise ValidationError(f'{department.id}{course_code} already exists in the system. {coordinator.first_name} {coordinator.last_name} is the current coordinator.')
             except Courses.DoesNotExist:
                 pass
 
     def save(self, commit=True):
+        if hasattr(self, 'coordinator_assigned'):
+            return self.existing_course
         instance = super().save(commit=False)
         if commit:
             instance.save()
@@ -636,5 +647,71 @@ class SectionAddInstructorForm(forms.Form):
 
         SectionInstructors.objects.bulk_create(section_instructors)
         return section_instructors
+
+class TermForm(forms.ModelForm):
+    name = forms.CharField(
+        max_length=64,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100',
+            'placeholder': 'e.g., Fall 2024, Spring 2025'
+        })
+    )
+    start_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100',
+            'type': 'date'
+        })
+    )
+    end_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100',
+            'type': 'date'
+        })
+    )
+
+    class Meta:
+        model = Terms
+        fields = ['name', 'start_date', 'end_date']
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name:
+            try:
+                existing_term = Terms.objects.get(name__iexact=name)
+                if existing_term.id != self.instance.id:
+                    raise ValidationError('A term with this name already exists')
+            except Terms.DoesNotExist:
+                pass
+        return name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if not all([start_date, end_date]):
+            return cleaned_data
+
+        # Check if end_date is after start_date
+        if end_date <= start_date:
+            raise ValidationError('End date must be after start date')
+
+        # Check for overlapping dates
+        overlapping_terms = Terms.objects.filter(
+            (models.Q(start_date__lte=start_date) & models.Q(end_date__gte=start_date)) |
+            (models.Q(start_date__lte=end_date) & models.Q(end_date__gte=end_date)) |
+            (models.Q(start_date__gte=start_date) & models.Q(end_date__lte=end_date))
+        )
+
+        if self.instance.id:
+            overlapping_terms = overlapping_terms.exclude(id=self.instance.id)
+
+        if overlapping_terms.exists():
+            raise ValidationError('This term overlaps with existing terms')
+
+        return cleaned_data
 
 

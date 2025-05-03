@@ -1,0 +1,45 @@
+{% extends 'instructor/base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">Add Department</h1>
+        
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            
+            <div>
+                <label for="id" class="block text-sm font-medium mb-1">Department ID</label>
+                <input type="text" name="id" id="id" required
+                    class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                    placeholder="e.g., CS, MATH, ENGL">
+            </div>
+            
+            <div>
+                <label for="name" class="block text-sm font-medium mb-1">Department Name</label>
+                <input type="text" name="name" id="name" required
+                    class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                    placeholder="e.g., Computer Science, Mathematics, English">
+            </div>
+            
+            <div>
+                <label for="department_head" class="block text-sm font-medium mb-1">Department Head</label>
+                <select name="department_head" id="department_head"
+                    class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+                    <option value="">Select Department Head</option>
+                    {% for instructor in instructors %}
+                    <option value="{{ instructor.id }}">{{ instructor.first_name }} {{ instructor.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex justify-end">
+                <button type="submit"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Add Department
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

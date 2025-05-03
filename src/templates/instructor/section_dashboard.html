@@ -3,56 +3,53 @@
 
 {% block content %}
 <div class="flex flex-col gap-4">
-    <div class="flex flex-row gap-2 items-center justify-between">
-        <h1 class="text-2xl font-bold">{{term.name}} {{ section.course.department.id }}{{ section.course.course_code }} {{ section.course.name }} - Section {{ section.section_number }}</h1>
-        <div class="flex flex-row gap-2">
-            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
-            <span class="text-zinc-600 dark:text-zinc-400">/</span>
-            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }} {{ section.course.name }}</a>
-        </div>
+    <h1 class="text-2xl font-bold mb-4">{{term.name}} {{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }} {{ section.course.name }}</h1>
+    <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
+        <c-stat_full title="Term" value="{{ stats.term.value }}" desc="{{ stats.term.desc }}" icon="calendar" />
+        <c-stat_full title="Instructor" value="{{ stats.instructor.value }}" desc="{{ stats.instructor.desc }}" icon="chalkboard-teacher" />
+        <c-stat_full title="Students" value="{{ stats.students.value }}" desc="{{ stats.students.desc }}" icon="users" />
+        <c-stat_full title="Assignments" value="{{ stats.assignments.value }}" desc="{{ stats.assignments.desc }}" icon="tasks" />
+        <c-stat_full title="Evaluations" value="{{ stats.evaluations.value }}" desc="{{ stats.evaluations.desc }}" icon="clipboard-check" />
     </div>
 
-    <div class="flex flex-wrap gap-4">
-        <div
-            class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
-            <h2 class="text-lg font-bold">Section Statistics</h2>
-            <div class="flex flex-row gap-5 justify-center">
-                <c-stat_full title="Term" value="{{ term.name }}" icon="calendar" />
-                <c-stat_full title="Instructor" value="{{ user.first_name }} {{ user.last_name }}" icon="chalkboard-teacher" />
-                <c-stat_full title="Students" value="{{ students.count }}" icon="users" />
-                <c-stat_full title="Assignments" value="{{ assignments.count }}" icon="tasks" />
-                <c-stat_full title="Evaluations" value="{{ evaluations }}" icon="clipboard-check" />
-            </div>
-        </div>
+
+    <div class="join join-vertical lg:join-horizontal w-full">
+        {% if term.start_date <= current_date and current_date <= term.end_date %}
+            <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'section_add_student' section.id %}'">
+                <i class="fas fa-users-cog"></i>
+                Manage Students
+            </button>
+            <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_assignment_modal').showModal()">
+                <i class="fas fa-tasks"></i>
+                Create Assignment
+            </button>
+            <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'section_manage_groups' section.id %}'">
+                <i class="fas fa-users"></i>
+                Manage Groups
+            </button>
+            <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'section_manage_instructors' section.id %}'">
+                <i class="fas fa-chalkboard-teacher"></i>
+                Manage Instructors
+            </button>
+        {% endif %}
+        <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'export_grades' section.id %}'">
+            <i class="fas fa-download"></i>
+            Export Data
+        </button>
     </div>
 
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
-        <h2 class="text-lg font-bold">Quick Actions</h2>
-        <div class="flex flex-row gap-2">
-            {% if term.start_date <= current_date and current_date <= term.end_date %}
-                <c-btn_action type="button" label="Manage Students" icon="users-cog" onclick="window.location.href='{% url 'section_add_student' section.id %}'" />
-                <c-btn_action type="button" label="Create Assignment" icon="tasks" onclick="window.location.href='{% url 'section_add_assignment' section.id %}'" />
-                <c-btn_action type="button" label="Manage Groups" icon="users" onclick="window.location.href='{% url 'section_manage_groups' section.id %}'" />
-                <c-btn_action type="button" label="Manage Instructors" icon="chalkboard-teacher" onclick="window.location.href='{% url 'section_manage_instructors' section.id %}'" />
-            {% endif %}
-            <c-btn_action type="button" label="Export Data" icon="download" onclick="window.location.href='{% url 'export_grades' section.id %}'" />
-        </div>
-    </div>
 
     {% if students.count == 0 and assignments.count == 0 %}
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
         <h2 class="text-lg font-bold">Import Data</h2>
         <div class="flex flex-col gap-4">
             <form method="POST" enctype="multipart/form-data" action="{% url 'import_wizard' section.id %}" id="import-form">
                 {% csrf_token %}
                 <div class="flex flex-row gap-2 items-center">
-                    <c-btn_action 
-                        type="button" 
-                        label="Import Students" 
-                        icon="file-import" 
-                        onclick="document.getElementById('import-file').click()"
-                        class="{% if BRIGHTSPACE_ENABLED %}bg-purple-500 hover:bg-purple-700{% else %}bg-orange-500 hover:bg-orange-700{% endif %}"
-                    />
+                    <button type="button" class="btn {% if BRIGHTSPACE_ENABLED %}btn-primary{% else %}btn-secondary{% endif %} flex-1" onclick="document.getElementById('import-file').click()">
+                        <i class="fas fa-file-import"></i>
+                        Import Students
+                    </button>
                     <input 
                         type="file" 
                         id="import-file" 
@@ -67,106 +64,262 @@
     </div>
     {% endif %}
 
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+    <dialog id="import_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Importing Students</h3>
+            <div class="flex flex-col items-center gap-4">
+                <div class="w-full">
+                    <progress class="progress w-full"></progress>
+                </div>
+                <p class="text-sm">Importing students... (This may take a while)</p>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
         <h2 class="text-lg font-bold">Active Assignments</h2>
-        <div class="grid grid-cols-3 gap-4">
-            {% for assignment in assignments %}
-                {% if assignment.is_active %}
-                <div class="flex flex-row justify-between gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm">
-                    <div class="flex flex-col">
-                        <div class="flex items-center">
-                            <h3 class="text-md font-bold truncate">{{ assignment.name }}</h3>
-                            <div class="inline-grid *:[grid-area:1/1]">
-                                <div class="status status-success animate-ping"></div>
-                                <div class="status status-success"></div>
+        {% if assignments %}
+            <div class="grid grid-cols-3 gap-4">
+                {% for assignment in assignments %}
+                    {% if assignment.is_active %}
+                    <div class="card bg-base-100 shadow-sm border border-base-300">
+                        <div class="card-body">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="card-title text-md font-bold truncate">{{ assignment.name }}</h3>
+                                        <div class="inline-grid *:[grid-area:1/1]">
+                                            <div class="status status-success status-lg animate-ping"></div>
+                                            <div class="status status-success status-lg"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-base-content/70">
+                                        <p><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</p>
+                                        <p><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <button class="btn btn-primary btn-sm" onclick="window.location.href='{% url 'view_assignment' assignment.id %}'">
+                                        <i class="fas fa-eye"></i>
+                                        View
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('edit_assignment_{{assignment.id}}').showModal()">
+                                        <i class="fas fa-pencil"></i>
+                                        Edit
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</span>
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</span>
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <c-btn_mini type="button" label="View" icon="eye" onclick="window.location.href='{% url 'view_assignment' assignment.id %}'" />
-                        <c-btn_mini type="button" label="Edit" icon="pencil" onclick="window.location.href='{% url 'edit_assignment' assignment.id %}'" />
-                    </div>
-                </div>
-                {% endif %}
-            {% endfor %}
-        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                <p class="text-base-content/50 text-lg">No active assignments found</p>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
         <h2 class="text-lg font-bold">Past & Upcoming Assignments</h2>
-        <div class="grid grid-cols-3 gap-4">
-            {% for assignment in assignments %}
-                {% if not assignment.is_active %}
-                <div class="flex flex-row justify-between gap-2 bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm opacity-75">
-                    <div class="flex flex-col">
-                        <div class="flex items-center">
-                            <h3 class="text-md font-bold truncate">{{ assignment.name }}</h3>
+        {% if assignments %}
+            <div class="grid grid-cols-3 gap-4">
+                {% for assignment in assignments %}
+                    {% if not assignment.is_active %}
+                    <div class="card bg-base-100 shadow-sm border border-base-300 opacity-75">
+                        <div class="card-body">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="card-title text-md font-bold truncate">{{ assignment.name }}</h3>
+                                        <div class="inline-grid *:[grid-area:1/1]">
+                                            <div class="status status-neutral status-lg"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-base-content/70">
+                                        <p><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</p>
+                                        <p><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <button class="btn btn-primary btn-sm" onclick="window.location.href='{% url 'view_assignment' assignment.id %}'">
+                                        <i class="fas fa-eye"></i>
+                                        View
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('edit_assignment_{{assignment.id}}').showModal()">
+                                        <i class="fas fa-pencil"></i>
+                                        Edit
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Available:</b> {{ assignment.available_date }} {{ assignment.available_time }}</span>
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400"><b>Due:</b> {{ assignment.due_date }} {{ assignment.due_time }}</span>
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <c-btn_mini type="button" label="View" icon="eye" onclick="window.location.href='{% url 'view_assignment' assignment.id %}'" />
-                        <c-btn_mini type="button" label="Edit" icon="pencil" onclick="window.location.href='{% url 'edit_assignment' assignment.id %}'" />
-                    </div>
-                </div>
-                {% endif %}
-            {% endfor %}
-        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                <p class="text-base-content/50 text-lg">No past or upcoming assignments found</p>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
+    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
         <h2 class="text-lg font-bold">Students <span id="student-count" class="text-sm font-normal">({{ students.count }})</span></h2>
         <div class="flex flex-row gap-2">
-            <input type="text" id="student-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search for a student by name, ID, or group number" oninput="filterStudents(this.value)" />
+            <input type="text" id="student-search" class="input input-bordered w-full" placeholder="Search for a student by name, ID, or group number" oninput="filterStudents(this.value)" />
         </div>
-        <script>
-            function filterStudents(query) {
-                const students = document.querySelectorAll('.student-card');
-                const lowercaseQuery = query.toLowerCase().trim();
-                let visibleCount = 0;
-                
-                students.forEach(student => {
-                    const name = student.querySelector('.student-name').textContent.toLowerCase();
-                    const id = student.querySelector('.student-id').textContent.toLowerCase();
-                    const group = student.querySelector('.student-group').textContent.toLowerCase();
-                    
-                    const isVisible = name.includes(lowercaseQuery) || 
-                                    id.includes(lowercaseQuery) || 
-                                    group.includes(lowercaseQuery);
-                    
-                    student.style.display = isVisible ? 'flex' : 'none';
-                    if (isVisible) visibleCount++;
-                });
-
-                document.getElementById('student-count').textContent = `(${visibleCount})`;
-            }
-
-            document.addEventListener('DOMContentLoaded', function() {
-                document.querySelectorAll('[data-student-url]').forEach(button => {
-                    button.addEventListener('click', function() {
-                        window.location.href = this.dataset.studentUrl;
-                    });
-                });
-            });
-        </script>
-        <div class="grid grid-cols-5 gap-4">
-            {% for student in students %}
-            <a href="{% url 'student_profile' student.user_id.username %}" class="student-card flex flex-col justify-center items-center bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors">
-                <div class="flex flex-col text-center items-center w-full">
-                    <h3 class="student-name text-lg font-bold truncate max-w-full w-full">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>  
-                    <div class="flex flex-row gap-2 items-center">
-                        <span class="student-id text-sm text-zinc-600 dark:text-zinc-400">{{ student.user_id.id }}</span>
-                        <span class="student-group text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-400 dark:bg-zinc-600 px-2 py-1 rounded-lg">Group {{ student.group.name }}</span>
+        {% if students %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {% for student in students %}
+                <a href="{% url 'student_profile' student.user_id.username %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200">
+                    <div class="card-body p-4 pt-3 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="flex flex-col gap-2 relative z-10">
+                            <div class="flex items-center justify-between -mt-1">
+                                <h3 class="student-name card-title text-lg font-bold truncate m-0">{{ student.user_id.first_name }} {{ student.user_id.last_name }}</h3>
+                                {% if student.group %}
+                                    <div class="badge badge-primary badge-sm">Group {{ student.group.name }}</div>
+                                {% else %}
+                                    <div class="badge badge-ghost badge-sm">No Group</div>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                    <i class="fas fa-user"></i>
+                                    <span>{{ student.user_id.username }}</span>
+                                </div>
+                                <div class="badge badge-outline badge-sm font-mono">{{ student.user_id.id }}</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                <p class="text-base-content/50 text-lg">No students found</p>
+            </div>
+        {% endif %}
     </div>
 </div>
+
+<!-- Add Assignment Modal -->
+<dialog id="add_assignment_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold">Create Assignment</h3>
+        <form method="POST" action="{% url 'section_add_assignment' section.id %}" onsubmit="setTimes()">
+            {% csrf_token %}
+            <input type="hidden" name="available_time" id="available_time" value="00:01" />
+            <input type="hidden" name="due_time" id="due_time" value="23:59" />
+            <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+                <legend class="fieldset-legend">Assignment Details</legend>
+                
+                <label class="label">Assignment Name</label>
+                <input type="text" name="name" class="input input-bordered w-full" required />
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">Available Date</label>
+                        <input type="date" name="available_date" class="input input-bordered w-full" required />
+                    </div>
+                    <div>
+                        <label class="label">Due Date</label>
+                        <input type="date" name="due_date" class="input input-bordered w-full" required />
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">Max Points (Self)</label>
+                        <input type="number" name="max_points_self" id="max_points_self" class="input input-bordered w-full" required />
+                    </div>
+                    <div>
+                        <label class="label">Max Points (Partner)</label>
+                        <input type="number" name="max_points_partner" class="input input-bordered w-full" required />
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="checkbox" name="self_eval" class="checkbox" checked />
+                        <span class="label-text">Enable Self Evaluation</span>
+                    </label>
+                    
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="checkbox" name="enable_merits" class="checkbox" checked />
+                        <span class="label-text">Enable Merit Scoring</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <div class="modal-action w-full">
+                <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('add_assignment_modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary flex-1">Create Assignment</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+{% for assignment in assignments %}
+    <!-- Edit Assignment Modal -->
+    <dialog id="edit_assignment_{{assignment.id}}" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box">
+            <h3 class="text-lg font-bold">Edit Assignment: {{ assignment.name }}</h3>
+            <form method="POST" action="{% url 'edit_assignment' assignment.id %}" onsubmit="setTimes()">
+                {% csrf_token %}
+                <input type="hidden" name="available_time" id="available_time_{{assignment.id}}" value="00:01" />
+                <input type="hidden" name="due_time" id="due_time_{{assignment.id}}" value="23:59" />
+                <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+                    <legend class="fieldset-legend">Assignment Details</legend>
+                    
+                    <label class="label">Assignment Name</label>
+                    <input type="text" name="name" class="input input-bordered w-full" value="{{ assignment.name }}" required />
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="label">Available Date</label>
+                            <input type="date" name="available_date" class="input input-bordered w-full" value="{{ assignment.available_date|date:'Y-m-d' }}" required />
+                        </div>
+                        <div>
+                            <label class="label">Due Date</label>
+                            <input type="date" name="due_date" class="input input-bordered w-full" value="{{ assignment.due_date|date:'Y-m-d' }}" required />
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="label">Max Points (Self)</label>
+                            <input type="number" name="max_points_self" class="input input-bordered w-full" value="{{ assignment.max_points_self }}" required />
+                        </div>
+                        <div>
+                            <label class="label">Max Points (Partner)</label>
+                            <input type="number" name="max_points_partner" class="input input-bordered w-full" value="{{ assignment.max_points_partner }}" required />
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" name="self_eval" class="checkbox" {% if assignment.self_eval %}checked{% endif %} />
+                            <span class="label-text">Enable Self Evaluation</span>
+                        </label>
+                        
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" name="enable_merits" class="checkbox" {% if assignment.enable_merits %}checked{% endif %} />
+                            <span class="label-text">Enable Merit Scoring</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="modal-action w-full">
+                    <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('edit_assignment_{{assignment.id}}').close()">Cancel</button>
+                    <button type="submit" class="btn btn-primary flex-1">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+{% endfor %}
 
 <script>
 function handleFileSelect(input) {
@@ -191,10 +344,44 @@ function handleFileSelect(input) {
                 }
             }
 
+            // Show the modal and submit the form
+            const modal = document.getElementById('import_modal');
+            modal.showModal();
             document.getElementById('import-form').submit();
         };
         reader.readAsText(file);
     }
 }
+
+function filterStudents(query) {
+    const students = document.querySelectorAll('.card');
+    const lowercaseQuery = query.toLowerCase().trim();
+    let visibleCount = 0;
+    
+    students.forEach(student => {
+        const name = student.querySelector('.student-name').textContent.toLowerCase();
+        const id = student.querySelector('.badge-outline').textContent.toLowerCase();
+        const username = student.querySelector('.fa-user + span').textContent.toLowerCase();
+        const group = student.querySelector('.badge-primary, .badge-ghost')?.textContent.toLowerCase() || '';
+        
+        const isVisible = name.includes(lowercaseQuery) || 
+                        id.includes(lowercaseQuery) || 
+                        username.includes(lowercaseQuery) ||
+                        group.includes(lowercaseQuery);
+        
+        student.style.display = isVisible ? 'block' : 'none';
+        if (isVisible) visibleCount++;
+    });
+
+    document.getElementById('student-count').textContent = `(${visibleCount})`;
+}
+
+function setTimes() {
+    const form = event.target;
+    const assignmentId = form.id.split('_')[2];
+    document.getElementById('available_time_' + assignmentId).value = '23:59';
+    document.getElementById('due_time_' + assignmentId).value = '23:59';
+}
+
 </script>
 {% endblock %} 
