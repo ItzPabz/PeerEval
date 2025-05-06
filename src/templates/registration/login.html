@@ -2,22 +2,24 @@
 {% block title %}Login - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center">
-  <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-96 border p-4">
-    <legend class="fieldset-legend">Login</legend>
-    <form method="POST" action="{% url 'login' %}">
-      {% csrf_token %}
-      <label class="label">Username</label>
-      <input type="text" class="input w-full mb-2" placeholder="Username" name="username" id="username" />
+<div class="h-full flex-1 flex items-center justify-center">
+  <div class="flex items-center justify-center min-h-full">
+    <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-96 border p-4">
+      <h1 class="text-2xl font-bold mb-4 text-center">System Login</h1>
+      <form method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <label class="label">Username</label>
+        <input type="text" class="input w-full mb-2" placeholder="Username" name="username" id="username" />
 
-      <label class="label">Password</label>
-      <input type="password" class="input w-full mb-2" placeholder="Password" name="password" id="password" />
+        <label class="label">Password</label>
+        <input type="password" class="input w-full mb-2" placeholder="Password" name="password" id="password" />
 
-      <button type="submit" class="btn btn-primary mt-4 w-full">Login</button>
-    </form>
-    <div class="mt-4 text-center">
-      <a href="{% url 'password_reset_request' %}" class="link">Forgot Password?</a>
-    </div>
-  </fieldset>
+        <button type="submit" class="btn btn-primary mt-4 w-full">Login</button>
+      </form>
+      <div class="mt-4 text-center">
+        <a href="{% url 'password_reset_request' %}" class="link">Forgot Password?</a>
+      </div>
+    </fieldset>
+  </div>
 </div>
-{% endblock %}  
+{% endblock %}

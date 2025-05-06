@@ -558,6 +558,10 @@ def view_assignment(request, assignment_id):
     submitted_count = len(set(evaluations.values_list('evaluator_id', flat=True)))
     submission_percentage = (submitted_count / total_students * 100) if total_students > 0 else 0
     
+    class_avg_peer_score = evaluations.exclude(
+        evaluator_id=models.F('evaluatee_id')
+    ).aggregate(avg=models.Avg('points'))['avg']
+    
     students_data = []
     for student in enrolled_students:
         student_evals = evaluations.filter(evaluatee_id=student.user_id)
@@ -587,18 +591,15 @@ def view_assignment(request, assignment_id):
             'flags': flags,
             'merit_scores': merit_scores
         })
-    
-    avg_merit_scores = {}
-    if assignment.enable_merits:
-        all_merit_scores = MeritScores.objects.filter(evaluation_id__in=evaluations)
-        if all_merit_scores.exists():
-            avg_merit_scores = {
-                'avg_work_contribution': all_merit_scores.aggregate(avg=models.Avg('score_workcontribution'))['avg'],
-                'avg_team_interaction': all_merit_scores.aggregate(avg=models.Avg('score_teaminteraction'))['avg'],
-                'avg_team_awareness': all_merit_scores.aggregate(avg=models.Avg('score_teamawareness'))['avg'],
-                'avg_quality_of_work': all_merit_scores.aggregate(avg=models.Avg('score_qualityofwork'))['avg'],
-                'avg_knowledge_and_skills': all_merit_scores.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg']
-            }
+
+    students_awaiting = enrolled_students.exclude(
+        user_id__in=evaluations.values_list('evaluator_id', flat=True)
+    )
+
+    student_submissions = Evaluations.objects.filter(
+        assignment_id=assignment,
+        evaluator_id__in=students_awaiting.values_list('user_id', flat=True)
+    ).select_related('evaluator_id', 'evaluatee_id')
     
     context = {
         'assignment': assignment,
@@ -608,7 +609,9 @@ def view_assignment(request, assignment_id):
         'submitted_count': submitted_count,
         'submission_percentage': submission_percentage,
         'current_date': timezone.now().date(),
-        **avg_merit_scores
+        'class_avg_peer_score': class_avg_peer_score,
+        'students_awaiting': students_awaiting,
+        'student_submissions': student_submissions
     }
     
     return render(request, 'instructor/view_assignment.html', context)
@@ -2022,7 +2025,6 @@ def server_error(request):
 def section_manage_instructors(request, section_id):
     section = get_object_or_404(Sections, id=section_id)
     
-    # Check if user has permission to manage this section
     if not request.user.is_superuser and not SectionInstructors.objects.filter(section_id=section, user_id=request.user).exists():
         messages.error(request, "You don't have permission to manage instructors for this section.")
         return redirect('index')
@@ -2052,7 +2054,6 @@ def section_manage_instructors(request, section_id):
 def section_remove_instructors(request, section_id):
     section = get_object_or_404(Sections, id=section_id)
     
-    # Check if user has permission to manage this section
     if not request.user.is_superuser and not SectionInstructors.objects.filter(section_id=section, user_id=request.user).exists():
         messages.error(request, "You don't have permission to manage instructors for this section.")
         return redirect('index')

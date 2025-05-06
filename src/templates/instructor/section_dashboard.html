@@ -3,7 +3,15 @@
 
 {% block content %}
 <div class="flex flex-col gap-4">
-    <h1 class="text-2xl font-bold mb-4">{{term.name}} {{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }} {{ section.course.name }}</h1>
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">{{term.name}} {{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }} {{ section.course.name }}</h1>
+        <div class="text-sm breadcrumbs">
+            <ul>
+                <li><a href="{% url 'index' %}" class="text-primary">Dashboard</a></li>
+                <li>{{ term.name }} {{ section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }}</li>
+            </ul>
+        </div>
+    </div>
     <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
         <c-stat_full title="Term" value="{{ stats.term.value }}" desc="{{ stats.term.desc }}" icon="calendar" />
         <c-stat_full title="Instructor" value="{{ stats.instructor.value }}" desc="{{ stats.instructor.desc }}" icon="chalkboard-teacher" />
@@ -13,26 +21,26 @@
     </div>
 
 
-    <div class="join join-vertical lg:join-horizontal w-full">
+    <div class="w-full flex gap-2 justify-between">
         {% if term.start_date <= current_date and current_date <= term.end_date %}
-            <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'section_add_student' section.id %}'">
+            <button class="btn btn-primary flex-1" onclick="window.location.href='{% url 'section_add_student' section.id %}'">
                 <i class="fas fa-users-cog"></i>
                 Manage Students
             </button>
-            <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_assignment_modal').showModal()">
+            <button class="btn btn-primary flex-1" onclick="document.getElementById('add_assignment_modal').showModal()">
                 <i class="fas fa-tasks"></i>
                 Create Assignment
             </button>
-            <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'section_manage_groups' section.id %}'">
+            <button class="btn btn-primary flex-1" onclick="window.location.href='{% url 'section_manage_groups' section.id %}'">
                 <i class="fas fa-users"></i>
                 Manage Groups
             </button>
-            <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'section_manage_instructors' section.id %}'">
+            <button class="btn btn-primary flex-1" onclick="window.location.href='{% url 'section_manage_instructors' section.id %}'">
                 <i class="fas fa-chalkboard-teacher"></i>
                 Manage Instructors
             </button>
         {% endif %}
-        <button class="btn btn-primary join-item flex-1" onclick="window.location.href='{% url 'export_grades' section.id %}'">
+        <button class="btn btn-primary flex-1" onclick="window.location.href='{% url 'export_grades' section.id %}'">
             <i class="fas fa-download"></i>
             Export Data
         </button>

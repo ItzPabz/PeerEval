@@ -4,11 +4,14 @@
 {% block content %}
 <div class="flex flex-col gap-4">
     <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</h1>
+        <h1 class="text-2xl font-bold">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{
+            section.section_number }}</h1>
         <div class="text-sm breadcrumbs">
             <ul>
                 <li><a href="{% url 'index' %}" class="text-primary">Dashboard</a></li>
-                <li><a href="{% url 'section_dashboard' section.id %}" class="text-primary">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</a></li>
+                <li><a href="{% url 'section_dashboard' section.id %}" class="text-primary">{{ term.name }} {{
+                        section.course.department.id }}{{ section.course.course_code }} - Section {{
+                        section.section_number }}</a></li>
                 <li>Manage Students</li>
             </ul>
         </div>
@@ -23,52 +26,62 @@
                         Current Students
                         <div class="badge badge-primary">{{ total_enrolled }}</div>
                     </h2>
-                    <div class="form-control w-96">
-                        <div class="input-group">
-                            <input type="text" id="enrolled-search" class="input input-bordered w-full" placeholder="Search enrolled students..." oninput="filterEnrolledStudents(this.value)" />
-                            <button class="btn btn-square">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <label class="input">
+                        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
+                                stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+                        <input type="search" required placeholder="Search" />
+                    </label>
                 </div>
             </div>
 
-            <form method="POST" action="{% url 'section_remove_students' section.id %}" onsubmit="return confirmRemoveStudents()">
+            <form method="POST" action="{% url 'section_remove_students' section.id %}"
+                onsubmit="return confirmRemoveStudents()">
                 {% csrf_token %}
                 <div class="overflow-x-auto mt-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-2">
                         {% for enrollment in enrolled_students %}
-                            <div class="enrolled-student-item card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200 cursor-pointer" onclick="toggleEnrolledStudentSelection(this, '{{ enrollment.user_id.id }}')">
-                                <div class="card-body p-4 pt-3 relative overflow-hidden">
-                                    <div class="absolute inset-0 bg-gradient-to-br from-error/5 to-error/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div class="absolute top-2 right-2 opacity-0 transition-opacity duration-300">
-                                        <div class="badge badge-error badge-sm">Selected</div>
-                                    </div>
-                                    <div class="flex flex-col gap-2 relative z-10">
-                                        <div class="flex items-center justify-between -mt-1">
-                                            <h3 class="student-name card-title text-lg font-bold truncate m-0">{{ enrollment.user_id.first_name }} {{ enrollment.user_id.last_name }}</h3>
-                                            {% if enrollment.group %}
-                                                <div class="badge badge-primary badge-sm">Group {{ enrollment.group.name }}</div>
-                                            {% else %}
-                                                <div class="badge badge-ghost badge-sm">No Group</div>
-                                            {% endif %}
+                        <div class="enrolled-student-item card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200 cursor-pointer"
+                            onclick="toggleEnrolledStudentSelection(this, '{{ enrollment.user_id.id }}')">
+                            <div class="card-body p-4 pt-3 relative overflow-hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-br from-error/5 to-error/10 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                </div>
+                                <div class="absolute top-2 right-2 opacity-0 transition-opacity duration-300">
+                                    <div class="badge badge-error badge-sm">Selected</div>
+                                </div>
+                                <div class="flex flex-col gap-2 relative z-10">
+                                    <div class="flex items-center justify-between -mt-1">
+                                        <h3 class="student-name card-title text-lg font-bold truncate m-0">{{
+                                            enrollment.user_id.first_name }} {{ enrollment.user_id.last_name }}</h3>
+                                        {% if enrollment.group %}
+                                        <div class="badge badge-primary badge-sm">Group {{ enrollment.group.name }}
                                         </div>
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center gap-2 text-sm text-base-content/70">
-                                                <i class="fas fa-user"></i>
-                                                <span>{{ enrollment.user_id.username }}</span>
-                                            </div>
-                                            <div class="badge badge-outline badge-sm font-mono">{{ enrollment.user_id.id }}</div>
+                                        {% else %}
+                                        <div class="badge badge-ghost badge-sm">No Group</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                            <i class="fas fa-user"></i>
+                                            <span>{{ enrollment.user_id.username }}</span>
+                                        </div>
+                                        <div class="badge badge-outline badge-sm font-mono">{{ enrollment.user_id.id }}
                                         </div>
                                     </div>
                                 </div>
-                                <input type="checkbox" name="remove_students" value="{{ enrollment.user_id.id }}" class="hidden" id="remove_student_{{ enrollment.user_id.id }}">
                             </div>
+                            <input type="checkbox" name="remove_students" value="{{ enrollment.user_id.id }}"
+                                class="hidden" id="remove_student_{{ enrollment.user_id.id }}">
+                        </div>
                         {% empty %}
-                            <div class="col-span-full text-center opacity-70">
-                                No students currently enrolled
-                            </div>
+                        <div class="col-span-full text-center opacity-70">
+                            No students currently enrolled
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
@@ -76,11 +89,18 @@
                 {% if enrolled_students.paginator.num_pages > 1 %}
                 <div class="flex justify-center items-center gap-4 my-4">
                     <div class="join">
-                        <button type="button" onclick="window.location.href='?enrolled_page={% if enrolled_students.has_previous %}{{ enrolled_students.previous_page_number }}{% else %}1{% endif %}&page={{ paginated_students.number }}'" class="join-item btn btn-neutral" {% if not enrolled_students.has_previous %}disabled{% endif %}>«</button>
+                        <button type="button"
+                            onclick="window.location.href='?enrolled_page={% if enrolled_students.has_previous %}{{ enrolled_students.previous_page_number }}{% else %}1{% endif %}&page={{ paginated_students.number }}'"
+                            class="join-item btn btn-neutral" {% if not enrolled_students.has_previous %}disabled{%
+                            endif %}>«</button>
                         <button class="join-item btn btn-neutral">
-                            <span id="currentEnrolledPage">{{ enrolled_students.number }}</span> / <span id="totalEnrolledPages">{{ enrolled_students.paginator.num_pages }}</span>
+                            <span id="currentEnrolledPage">{{ enrolled_students.number }}</span> / <span
+                                id="totalEnrolledPages">{{ enrolled_students.paginator.num_pages }}</span>
                         </button>
-                        <button type="button" onclick="window.location.href='?enrolled_page={% if enrolled_students.has_next %}{{ enrolled_students.next_page_number }}{% else %}{{ enrolled_students.paginator.num_pages }}{% endif %}&page={{ paginated_students.number }}'" class="join-item btn btn-neutral" {% if not enrolled_students.has_next %}disabled{% endif %}>»</button>
+                        <button type="button"
+                            onclick="window.location.href='?enrolled_page={% if enrolled_students.has_next %}{{ enrolled_students.next_page_number }}{% else %}{{ enrolled_students.paginator.num_pages }}{% endif %}&page={{ paginated_students.number }}'"
+                            class="join-item btn btn-neutral" {% if not enrolled_students.has_next %}disabled{% endif
+                            %}>»</button>
                     </div>
                 </div>
                 {% endif %}
@@ -104,47 +124,54 @@
                         Add New Students
                         <div class="badge badge-secondary">{{ total_available }}</div>
                     </h2>
-                    <div class="form-control w-96">
-                        <div class="input-group">
-                            <input type="text" id="student-search" class="input input-bordered w-full" placeholder="Search available students..." oninput="filterStudents(this.value)" />
-                            <button class="btn btn-square">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <label class="input">
+                        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
+                                stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+                        <input type="search" required placeholder="Search" />
+                    </label>
                 </div>
             </div>
-            
+
             <form method="POST">
                 {% csrf_token %}
                 <div class="overflow-x-auto mt-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-2">
                         {% for student in paginated_students %}
-                            <div class="student-item card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200 cursor-pointer" onclick="toggleStudentSelection(this, '{{ student.id }}')">
-                                <div class="card-body p-4 pt-3 relative overflow-hidden">
-                                    <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div class="absolute top-2 right-2 opacity-0 transition-opacity duration-300">
-                                        <div class="badge badge-primary badge-sm">Selected</div>
+                        <div class="student-item card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200 cursor-pointer"
+                            onclick="toggleStudentSelection(this, '{{ student.id }}')">
+                            <div class="card-body p-4 pt-3 relative overflow-hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                </div>
+                                <div class="absolute top-2 right-2 opacity-0 transition-opacity duration-300">
+                                    <div class="badge badge-primary badge-sm">Selected</div>
+                                </div>
+                                <div class="flex flex-col gap-2 relative z-10">
+                                    <div class="flex items-center justify-between -mt-1">
+                                        <h3 class="student-name card-title text-lg font-bold truncate m-0">{{
+                                            student.first_name }} {{ student.last_name }}</h3>
                                     </div>
-                                    <div class="flex flex-col gap-2 relative z-10">
-                                        <div class="flex items-center justify-between -mt-1">
-                                            <h3 class="student-name card-title text-lg font-bold truncate m-0">{{ student.first_name }} {{ student.last_name }}</h3>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                            <i class="fas fa-user"></i>
+                                            <span>{{ student.username }}</span>
                                         </div>
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center gap-2 text-sm text-base-content/70">
-                                                <i class="fas fa-user"></i>
-                                                <span>{{ student.username }}</span>
-                                            </div>
-                                            <div class="badge badge-outline badge-sm font-mono">{{ student.id }}</div>
-                                        </div>
+                                        <div class="badge badge-outline badge-sm font-mono">{{ student.id }}</div>
                                     </div>
                                 </div>
-                                <input type="checkbox" name="students" value="{{ student.id }}" class="hidden" id="student_{{ student.id }}">
                             </div>
+                            <input type="checkbox" name="students" value="{{ student.id }}" class="hidden"
+                                id="student_{{ student.id }}">
+                        </div>
                         {% empty %}
-                            <div class="col-span-full text-center opacity-70">
-                                No students available to add
-                            </div>
+                        <div class="col-span-full text-center opacity-70">
+                            No students available to add
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
@@ -152,17 +179,24 @@
                 {% if paginated_students.paginator.num_pages > 1 %}
                 <div class="flex justify-center items-center gap-4 my-4">
                     <div class="join">
-                        <button type="button" onclick="window.location.href='?page={% if paginated_students.has_previous %}{{ paginated_students.previous_page_number }}{% else %}1{% endif %}&enrolled_page={{ enrolled_students.number }}'" class="join-item btn btn-neutral" {% if not paginated_students.has_previous %}disabled{% endif %}>«</button>
+                        <button type="button"
+                            onclick="window.location.href='?page={% if paginated_students.has_previous %}{{ paginated_students.previous_page_number }}{% else %}1{% endif %}&enrolled_page={{ enrolled_students.number }}'"
+                            class="join-item btn btn-neutral" {% if not paginated_students.has_previous %}disabled{%
+                            endif %}>«</button>
                         <button class="join-item btn btn-neutral">
-                            <span id="currentPage">{{ paginated_students.number }}</span> / <span id="totalPages">{{ paginated_students.paginator.num_pages }}</span>
+                            <span id="currentPage">{{ paginated_students.number }}</span> / <span id="totalPages">{{
+                                paginated_students.paginator.num_pages }}</span>
                         </button>
-                        <button type="button" onclick="window.location.href='?page={% if paginated_students.has_next %}{{ paginated_students.next_page_number }}{% else %}{{ paginated_students.paginator.num_pages }}{% endif %}&enrolled_page={{ enrolled_students.number }}'" class="join-item btn btn-neutral" {% if not paginated_students.has_next %}disabled{% endif %}>»</button>
+                        <button type="button"
+                            onclick="window.location.href='?page={% if paginated_students.has_next %}{{ paginated_students.next_page_number }}{% else %}{{ paginated_students.paginator.num_pages }}{% endif %}&enrolled_page={{ enrolled_students.number }}'"
+                            class="join-item btn btn-neutral" {% if not paginated_students.has_next %}disabled{% endif
+                            %}>»</button>
                     </div>
                 </div>
                 {% endif %}
-                
+
                 <div class="flex justify-center items-center mt-4">
-                    <button type="submit" class="btn btn-primary gap-2">
+                    <button type="submit" class="btn btn-primary gap-2" {% if not paginated_students or paginated_students|length == 0 %}disabled{% endif %}>
                         <i class="fas fa-plus"></i>
                         Add Selected Students
                     </button>
@@ -177,16 +211,16 @@
         const students = document.querySelectorAll('.student-item');
         const lowercaseQuery = query.toLowerCase().trim();
         let visibleCount = 0;
-        
+
         students.forEach(student => {
             const name = student.querySelector('.student-name').textContent.toLowerCase();
             const id = student.querySelector('.badge-outline').textContent.toLowerCase();
             const username = student.querySelector('.fa-user + span').textContent.toLowerCase();
-            
-            const isVisible = name.includes(lowercaseQuery) || 
-                             id.includes(lowercaseQuery) || 
-                             username.includes(lowercaseQuery);
-            
+
+            const isVisible = name.includes(lowercaseQuery) ||
+                id.includes(lowercaseQuery) ||
+                username.includes(lowercaseQuery);
+
             student.style.display = isVisible ? 'block' : 'none';
             if (isVisible) visibleCount++;
         });
@@ -198,29 +232,29 @@
         const students = document.querySelectorAll('.enrolled-student-item');
         const lowercaseQuery = query.toLowerCase().trim();
         let visibleCount = 0;
-        
+
         students.forEach(student => {
             const name = student.querySelector('.student-name').textContent.toLowerCase();
             const id = student.querySelector('.badge-outline').textContent.toLowerCase();
             const username = student.querySelector('.fa-user + span').textContent.toLowerCase();
             const group = student.querySelector('.badge-primary, .badge-ghost')?.textContent.toLowerCase() || '';
-            
-            const isVisible = name.includes(lowercaseQuery) || 
-                             id.includes(lowercaseQuery) || 
-                             username.includes(lowercaseQuery) ||
-                             group.includes(lowercaseQuery);
-            
+
+            const isVisible = name.includes(lowercaseQuery) ||
+                id.includes(lowercaseQuery) ||
+                username.includes(lowercaseQuery) ||
+                group.includes(lowercaseQuery);
+
             student.style.display = isVisible ? 'block' : 'none';
             if (isVisible) visibleCount++;
         });
 
         document.querySelector('.badge-primary').textContent = '{{ total_enrolled }}';
     }
-    
+
     function toggleStudentSelection(element, id) {
         const checkbox = document.getElementById('student_' + id);
         checkbox.checked = !checkbox.checked;
-        
+
         if (checkbox.checked) {
             element.classList.add('border-primary');
             element.querySelector('.badge').classList.remove('opacity-0');
@@ -235,7 +269,7 @@
     function toggleEnrolledStudentSelection(element, id) {
         const checkbox = document.getElementById('remove_student_' + id);
         checkbox.checked = !checkbox.checked;
-        
+
         if (checkbox.checked) {
             element.classList.add('border-error');
             element.querySelector('.badge').classList.remove('opacity-0');
@@ -269,7 +303,7 @@
         const itemsPerPage = getItemsPerPage();
         const enrolledButtons = document.querySelectorAll('.enrolled-student-item + .join button');
         const studentButtons = document.querySelectorAll('.student-item + .join button');
-        
+
         // Update enrolled students pagination
         enrolledButtons.forEach(button => {
             if (button.onclick) {
@@ -292,7 +326,7 @@
     }
 
     // Update pagination on page load and window resize
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         filterStudents('');
         filterEnrolledStudents('');
         updatePaginationUrls();
@@ -300,4 +334,4 @@
 
     window.addEventListener('resize', updatePaginationUrls);
 </script>
-{% endblock %} 
+{% endblock %}

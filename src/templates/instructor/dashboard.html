@@ -2,44 +2,53 @@
 {% block title %}Instructor Dashboard - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Instructor Dashboard</h1>
-<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
-    <c-stat_full title="Courses" value="{{ stats.courses.value }}" desc="{{ stats.courses.desc }}" />
-    <c-stat_full title="Sections" value="{{ stats.sections.value }}" desc="{{ stats.sections.desc }}" />
-    <c-stat_full title="Assignments" value="{{ stats.assignments.value }}" desc="{{ stats.assignments.desc }}" />
-    <c-stat_full title="Students" value="{{ stats.students.value }}" desc="{{ stats.students.desc }}" />
-    <c-stat_full title="Evaluations" value="{{ stats.evaluations.value }}" desc="{{ stats.evaluations.desc }}" />
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Instructor Dashboard</h1>
+        <div class="text-sm breadcrumbs">
+            <ul>
+                <li>Dashboard</li>
+            </ul>
+        </div>
+    </div>
+    <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
+        <c-stat_full title="Courses" value="{{ stats.courses.value }}" desc="{{ stats.courses.desc }}" icon="book" />
+        <c-stat_full title="Sections" value="{{ stats.sections.value }}" desc="{{ stats.sections.desc }}" icon="chalkboard" />
+        <c-stat_full title="Assignments" value="{{ stats.assignments.value }}" desc="{{ stats.assignments.desc }}" icon="tasks" />
+        <c-stat_full title="Students" value="{{ stats.students.value }}" desc="{{ stats.students.desc }}" icon="users" />
+        <c-stat_full title="Evaluations" value="{{ stats.evaluations.value }}" desc="{{ stats.evaluations.desc }}" icon="clipboard-check" />
+    </div>
 </div>
 
-<div class="join join-vertical lg:join-horizontal w-full mt-4">
+<div class="w-full mt-4 flex gap-2 justify-between">
     {% if is_superuser %}
-    <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_term_modal').showModal()">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('add_term_modal').showModal()">
         <i class="fas fa-calendar-days"></i>
         Add Term
     </button>
-    <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_department_modal').showModal()">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('add_department_modal').showModal()">
         <i class="fas fa-building"></i>
         Add Department
     </button>
     {% endif %}
     {% if is_depthead %}
-    <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_course_modal').showModal()">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('add_course_modal').showModal()">
         <i class="fas fa-book"></i>
         Add Course
     </button>
-    <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_instructor_modal').showModal()">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('add_instructor_modal').showModal()">
         <i class="fas fa-chalkboard-teacher"></i>
         Add Instructor
     </button>
     {% endif %}
     {% if is_coordinator %}
-    <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_section_modal').showModal()">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('add_section_modal').showModal()">
         <i class="fas fa-chalkboard"></i>
         Add Section
     </button>
     {% endif %}
     {% if is_instructor %}
-    <button class="btn btn-primary join-item flex-1" onclick="document.getElementById('add_student_modal').showModal()">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('add_student_modal').showModal()">
         <i class="fas fa-users"></i>
         Add Student
     </button>
