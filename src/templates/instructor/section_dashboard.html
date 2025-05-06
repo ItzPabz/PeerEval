@@ -176,7 +176,15 @@
     <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
         <h2 class="text-lg font-bold">Students <span id="student-count" class="text-sm font-normal">({{ students.count }})</span></h2>
         <div class="flex flex-row gap-2">
-            <input type="text" id="student-search" class="input input-bordered w-full" placeholder="Search for a student by name, ID, or group number" oninput="filterStudents(this.value)" />
+            <label class="input input-bordered flex items-center gap-2 w-full">
+                <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="currentColor">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                </svg>
+                <input type="search" id="student-search" class="w-full" placeholder="Search for a student by name, ID, or group number" oninput="filterStudents(this.value)" required />
+            </label>
         </div>
         {% if students %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -329,6 +337,12 @@
     </dialog>
 {% endfor %}
 
+<style>
+.student-card-hidden {
+    display: none !important;
+}
+</style>
+
 <script>
 function handleFileSelect(input) {
     if (input.files && input.files[0]) {
@@ -362,25 +376,34 @@ function handleFileSelect(input) {
 }
 
 function filterStudents(query) {
-    const students = document.querySelectorAll('.card');
+    console.log('Filtering students with query:', query);
+    const studentCards = document.querySelectorAll('a.card');
+    console.log('Found student cards:', studentCards.length);
     const lowercaseQuery = query.toLowerCase().trim();
     let visibleCount = 0;
     
-    students.forEach(student => {
-        const name = student.querySelector('.student-name').textContent.toLowerCase();
-        const id = student.querySelector('.badge-outline').textContent.toLowerCase();
-        const username = student.querySelector('.fa-user + span').textContent.toLowerCase();
-        const group = student.querySelector('.badge-primary, .badge-ghost')?.textContent.toLowerCase() || '';
+    studentCards.forEach(card => {
+        const name = card.querySelector('.student-name').textContent.toLowerCase();
+        const id = card.querySelector('.badge-outline').textContent.toLowerCase();
+        const username = card.querySelector('.fa-user + span').textContent.toLowerCase();
+        const group = card.querySelector('.badge-primary, .badge-ghost')?.textContent.toLowerCase() || '';
+        
+        console.log('Student:', { name, id, username, group });
         
         const isVisible = name.includes(lowercaseQuery) || 
                         id.includes(lowercaseQuery) || 
                         username.includes(lowercaseQuery) ||
                         group.includes(lowercaseQuery);
         
-        student.style.display = isVisible ? 'block' : 'none';
-        if (isVisible) visibleCount++;
+        if (isVisible) {
+            card.classList.remove('student-card-hidden');
+            visibleCount++;
+        } else {
+            card.classList.add('student-card-hidden');
+        }
     });
 
+    console.log('Visible students:', visibleCount);
     document.getElementById('student-count').textContent = `(${visibleCount})`;
 }
 

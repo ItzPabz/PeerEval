@@ -12,6 +12,11 @@
             </ul>
         </div>
     </div>
+
+    <!-- TODO: ENSURE THAT MERITS ARE REQUIRED!!!!! -->
+    <!-- TODO: Make sure that a popup appears if students gives perfect 5/5 to every member! -->
+     
+    
     <form method="POST" action="{% url 'submit_evaluation' department.id course.course_code section_number assignment.id %}" id="evaluationForm">
         {% csrf_token %}
         {% for member in group_members %}

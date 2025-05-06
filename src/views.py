@@ -558,49 +558,98 @@ def view_assignment(request, assignment_id):
     submitted_count = len(set(evaluations.values_list('evaluator_id', flat=True)))
     submission_percentage = (submitted_count / total_students * 100) if total_students > 0 else 0
     
-    class_avg_peer_score = evaluations.exclude(
-        evaluator_id=models.F('evaluatee_id')
-    ).aggregate(avg=models.Avg('points'))['avg']
+    class_avg_peer_score = evaluations.aggregate(avg=models.Avg('points'))['avg']
     
     students_data = []
     for student in enrolled_students:
         student_evals = evaluations.filter(evaluatee_id=student.user_id)
-        self_eval = evaluations.filter(evaluator_id=student.user_id, evaluatee_id=student.user_id).first()
+        has_submitted = evaluations.filter(evaluator_id=student.user_id).exists()
+        student_score = student_evals.aggregate(avg=models.Avg('points'))['avg']
         
-        peer_evals = student_evals.exclude(evaluator_id=student.user_id)
-        peer_score = peer_evals.aggregate(avg=models.Avg('points'))['avg']
+        all_evaluations = []
+        for eval in student_evals:
+            eval_data = {
+                'id': eval.id,
+                'evaluator': eval.evaluator_id,
+                'points': eval.points,
+                'comments': eval.comments,
+                'is_self': eval.evaluator_id == eval.evaluatee_id,
+                'submission_date': eval.submission_date
+            }
+            
+            try:
+                merit_scores = MeritScores.objects.filter(evaluation_id=eval)
+                if merit_scores.exists():
+                    merit = merit_scores.aggregate(
+                        work_contribution=models.Avg('score_workcontribution'),
+                        team_interaction=models.Avg('score_teaminteraction'),
+                        team_awareness=models.Avg('score_teamawareness'),
+                        quality_work=models.Avg('score_qualityofwork'),
+                        knowledge_skills=models.Avg('score_knowledgeandskills')
+                    )
+                    eval_data['merit_scores'] = {
+                        'work_contribution': merit['work_contribution'],
+                        'team_interaction': merit['team_interaction'],
+                        'team_awareness': merit['team_awareness'],
+                        'quality_work': merit['quality_work'],
+                        'knowledge_skills': merit['knowledge_skills']
+                    }
+            except Exception as e:
+                # Log the error but continue processing
+                print(f"Error processing merit scores for evaluation {eval.id}: {e}")
+                eval_data['merit_scores'] = None
+            
+            all_evaluations.append(eval_data)
         
-        merit_scores = None
+        merit_scores = []
         if assignment.enable_merits:
-            merit_data = MeritScores.objects.filter(evaluation_id__in=peer_evals)
+            merit_data = MeritScores.objects.filter(evaluation_id__in=student_evals)
             if merit_data.exists():
-                merit_scores = {
-                    'work': merit_data.aggregate(avg=models.Avg('score_workcontribution'))['avg'],
-                    'team': merit_data.aggregate(avg=models.Avg('score_teaminteraction'))['avg'],
-                    'aware': merit_data.aggregate(avg=models.Avg('score_teamawareness'))['avg'],
-                    'quality': merit_data.aggregate(avg=models.Avg('score_qualityofwork'))['avg'],
-                    'skills': merit_data.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg']
-                }
+                work_score = merit_data.aggregate(avg=models.Avg('score_workcontribution'))['avg']
+                team_score = merit_data.aggregate(avg=models.Avg('score_teaminteraction'))['avg']
+                aware_score = merit_data.aggregate(avg=models.Avg('score_teamawareness'))['avg']
+                quality_score = merit_data.aggregate(avg=models.Avg('score_qualityofwork'))['avg']
+                skills_score = merit_data.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg']
+                
+                merit_scores = [
+                    {
+                        'category': 'Work Contribution',
+                        'score': round(work_score, 1) if work_score else 'N/A',
+                        'color': 'primary'
+                    },
+                    {
+                        'category': 'Team Interaction',
+                        'score': round(team_score, 1) if team_score else 'N/A',
+                        'color': 'primary'
+                    },
+                    {
+                        'category': 'Team Awareness',
+                        'score': round(aware_score, 1) if aware_score else 'N/A',
+                        'color': 'primary'
+                    },
+                    {
+                        'category': 'Quality of Work',
+                        'score': round(quality_score, 1) if quality_score else 'N/A',
+                        'color': 'primary'
+                    },
+                    {
+                        'category': 'Knowledge & Skills',
+                        'score': round(skills_score, 1) if skills_score else 'N/A',
+                        'color': 'primary'
+                    }
+                ]
         
         flags = get_flags(student.user_id.id, assignment.id)
         
         students_data.append({
             'user_id': student.user_id,
-            'self_score': self_eval.points if self_eval else None,
-            'peer_score': peer_score,
+            'student_score': student_score,
+            'has_submitted': has_submitted,
             'flags': flags,
-            'merit_scores': merit_scores
+            'merit_scores': merit_scores,
+            'evaluations': all_evaluations
         })
-
-    students_awaiting = enrolled_students.exclude(
-        user_id__in=evaluations.values_list('evaluator_id', flat=True)
-    )
-
-    student_submissions = Evaluations.objects.filter(
-        assignment_id=assignment,
-        evaluator_id__in=students_awaiting.values_list('user_id', flat=True)
-    ).select_related('evaluator_id', 'evaluatee_id')
-    
+        
     context = {
         'assignment': assignment,
         'section': section,
@@ -610,8 +659,6 @@ def view_assignment(request, assignment_id):
         'submission_percentage': submission_percentage,
         'current_date': timezone.now().date(),
         'class_avg_peer_score': class_avg_peer_score,
-        'students_awaiting': students_awaiting,
-        'student_submissions': student_submissions
     }
     
     return render(request, 'instructor/view_assignment.html', context)
@@ -1536,6 +1583,7 @@ def import_wizard(request, section_id):
                                     user.save()
                                     users_updated += 1
                             else:
+                                # Create new user with explicit password setting
                                 user = Users.objects.create(
                                     id=row_data['user_id'],
                                     username=row_data['username'],
@@ -1543,7 +1591,9 @@ def import_wizard(request, section_id):
                                     last_name=row_data['last_name'],
                                     is_instructor=False
                                 )
-                                user.set_password(row_data['user_id'])
+                                # Set password explicitly
+                                password = str(row_data['user_id'])
+                                user.set_password(password)
                                 user.save()
                                 users_created += 1
 
