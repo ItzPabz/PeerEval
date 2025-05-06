@@ -3,139 +3,273 @@
 
 {% block content %}
 <div class="flex flex-col gap-4">
-    <div class="flex flex-row gap-2 items-center justify-between">
-        <h1 class="text-2xl font-bold">Manage Instructors - {{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</h1>
-        <div class="flex flex-row gap-2">
-            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
-            <span class="text-zinc-600 dark:text-zinc-400">/</span>
-            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</a>
-            <span class="text-zinc-600 dark:text-zinc-400">/</span>
-            <span class="text-zinc-600 dark:text-zinc-400">Manage Instructors</span>
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{
+            section.section_number }}</h1>
+        <div class="text-sm breadcrumbs">
+            <ul>
+                <li><a href="{% url 'index' %}" class="text-primary">Dashboard</a></li>
+                <li><a href="{% url 'section_dashboard' section.id %}" class="text-primary">{{ term.name }} {{
+                        section.course.department.id }}{{ section.course.course_code }} - Section {{
+                        section.section_number }}</a></li>
+                <li>Manage Instructors</li>
+            </ul>
         </div>
     </div>
 
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-sm border border-zinc-100 dark:border-zinc-700">
-        <h2 class="text-lg font-bold">Current Instructors <span id="instructor-count" class="text-sm font-normal">({{ current_instructors.count }})</span></h2>
-        <div class="mb-4">
-            <input type="text" id="instructor-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search current instructors by name or ID" oninput="filterInstructors(this.value)" />
-        </div>
+    <!-- Current Instructors Section -->
+    <div class="card bg-base-200 shadow-lg">
+        <div class="card-body">
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="card-title text-xl">
+                        Current Instructors
+                        <div class="badge badge-primary">{{ total_enrolled }}</div>
+                    </h2>
+                    <label class="input">
+                        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
+                                stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+                        <input type="search" required placeholder="Search" oninput="filterInstructors(this.value)" />
+                    </label>
+                </div>
+            </div>
 
-        <form method="POST" action="{% url 'section_remove_instructors' section.id %}" onsubmit="return confirmRemoveInstructors()">
-            {% csrf_token %}
-            <div class="mb-4 max-h-[300px] overflow-y-auto bg-zinc-100 dark:bg-zinc-900 rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                    {% for instructor in current_instructors %}
-                        <div class="instructor-item cursor-pointer text-center p-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border-2 border-transparent flex flex-col justify-center items-center" onclick="toggleInstructorSelection(this, '{{ instructor.user_id.id }}')">
-                            <div class="flex flex-col text-center items-center w-full">
-                                <h3 class="instructor-name text-lg font-bold truncate max-w-full w-full">{{ instructor.user_id.first_name }} {{ instructor.user_id.last_name }}</h3>
-                                <div class="flex flex-row gap-2 items-center">
-                                    <span class="instructor-id text-sm text-zinc-600 dark:text-zinc-400">{{ instructor.user_id.id }}</span>
+            <form method="POST" action="{% url 'section_remove_instructors' section.id %}"
+                onsubmit="return confirmRemoveInstructors()">
+                {% csrf_token %}
+                <div class="overflow-x-auto mt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-2">
+                        {% for instructor in current_instructors %}
+                        <div class="enrolled-instructor-item card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200 cursor-pointer"
+                            onclick="toggleEnrolledInstructorSelection(this, '{{ instructor.user_id.id }}')">
+                            <div class="card-body p-4 pt-3 relative overflow-hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-br from-error/5 to-error/10 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                </div>
+                                <div class="absolute top-2 right-2 opacity-0 transition-opacity duration-300">
+                                    <div class="badge badge-error badge-sm">Selected</div>
+                                </div>
+                                <div class="flex flex-col gap-2 relative z-10">
+                                    <div class="flex items-center justify-between -mt-1">
+                                        <h3 class="instructor-name card-title text-lg font-bold truncate m-0">{{
+                                            instructor.user_id.first_name }} {{ instructor.user_id.last_name }}</h3>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                            <i class="fas fa-user"></i>
+                                            <span>{{ instructor.user_id.username }}</span>
+                                        </div>
+                                        <div class="badge badge-outline badge-sm font-mono">{{ instructor.user_id.id }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <input type="checkbox" name="remove_instructors" value="{{ instructor.user_id.id }}" class="hidden" id="remove_instructor_{{ instructor.user_id.id }}">
+                            <input type="checkbox" name="remove_instructors" value="{{ instructor.user_id.id }}"
+                                class="hidden" id="remove_instructor_{{ instructor.user_id.id }}">
                         </div>
-                    {% empty %}
-                        <div class="col-span-full text-center text-zinc-600 dark:text-zinc-400">
+                        {% empty %}
+                        <div class="col-span-full text-center opacity-70">
                             No instructors currently assigned
                         </div>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex justify-center items-center">
-                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                    Remove Selected Instructors
-                </button>
-            </div>
-        </form>
+                {% if enrolled_instructors.paginator.num_pages > 1 %}
+                <div class="flex justify-center items-center gap-4 my-4">
+                    <div class="join">
+                        <button type="button"
+                            onclick="window.location.href='?enrolled_page={% if enrolled_instructors.has_previous %}{{ enrolled_instructors.previous_page_number }}{% else %}1{% endif %}&page={{ paginated_instructors.number }}'"
+                            class="join-item btn btn-neutral" {% if not enrolled_instructors.has_previous %}disabled{%
+                            endif %}>«</button>
+                        <button class="join-item btn btn-neutral">
+                            <span id="currentEnrolledPage">{{ enrolled_instructors.number }}</span> / <span
+                                id="totalEnrolledPages">{{ enrolled_instructors.paginator.num_pages }}</span>
+                        </button>
+                        <button type="button"
+                            onclick="window.location.href='?enrolled_page={% if enrolled_instructors.has_next %}{{ enrolled_instructors.next_page_number }}{% else %}{{ enrolled_instructors.paginator.num_pages }}{% endif %}&page={{ paginated_instructors.number }}'"
+                            class="join-item btn btn-neutral" {% if not enrolled_instructors.has_next %}disabled{% endif
+                            %}>»</button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="flex justify-center items-center mt-4">
+                    <button type="submit" class="btn btn-error gap-2">
+                        <i class="fas fa-trash"></i>
+                        Remove Selected Instructors
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 rounded-lg p-4 shadow-sm border border-zinc-100 dark:border-zinc-700">
-        <h2 class="text-lg font-bold">Add New Instructors <span id="available-count" class="text-sm font-normal">({{ available_instructors.count }})</span></h2>
-        <div class="mb-4">
-            <input type="text" id="instructor-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search available instructors by name or ID" oninput="filterAvailableInstructors(this.value)" />
-        </div>
-        
-        <form method="POST">
-            {% csrf_token %}
-            <div class="mb-4 max-h-[300px] overflow-y-auto bg-zinc-100 dark:bg-zinc-900 rounded-lg p-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                    {% for instructor in available_instructors %}
-                        <div class="instructor-item cursor-pointer text-center p-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border-2 border-transparent flex flex-col justify-center items-center" onclick="toggleInstructorSelection(this, '{{ instructor.id }}')">
-                            <div class="flex flex-col text-center items-center w-full">
-                                <h3 class="instructor-name text-lg font-bold truncate max-w-full w-full">{{ instructor.first_name }} {{ instructor.last_name }}</h3>
-                                <div class="flex flex-row gap-2 items-center">
-                                    <span class="instructor-id text-sm text-zinc-600 dark:text-zinc-400">{{ instructor.id }}</span>
-                                </div>
-                            </div>
-                            <input type="checkbox" name="instructors" value="{{ instructor.id }}" class="hidden" id="instructor_{{ instructor.id }}">
-                        </div>
-                    {% empty %}
-                        <div class="col-span-full text-center text-zinc-600 dark:text-zinc-400">
-                            No instructors available to add
-                        </div>
-                    {% endfor %}
+    <!-- Add New Instructors Section -->
+    <div class="card bg-base-200 shadow-lg">
+        <div class="card-body">
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="card-title text-xl">
+                        Add New Instructors
+                        <div class="badge badge-secondary">{{ total_available }}</div>
+                    </h2>
+                    <label class="input">
+                        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
+                                stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+                        <input type="search" required placeholder="Search" oninput="filterAvailableInstructors(this.value)" />
+                    </label>
                 </div>
             </div>
-            
-            <div class="flex justify-center items-center">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                    Add Selected Instructors
-                </button>
-            </div>
-        </form>
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="overflow-x-auto mt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-2">
+                        {% for instructor in available_instructors %}
+                        <div class="instructor-item card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200 cursor-pointer"
+                            onclick="toggleInstructorSelection(this, '{{ instructor.id }}')">
+                            <div class="card-body p-4 pt-3 relative overflow-hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                </div>
+                                <div class="absolute top-2 right-2 opacity-0 transition-opacity duration-300">
+                                    <div class="badge badge-primary badge-sm">Selected</div>
+                                </div>
+                                <div class="flex flex-col gap-2 relative z-10">
+                                    <div class="flex items-center justify-between -mt-1">
+                                        <h3 class="instructor-name card-title text-lg font-bold truncate m-0">{{
+                                            instructor.first_name }} {{ instructor.last_name }}</h3>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2 text-sm text-base-content/70">
+                                            <i class="fas fa-user"></i>
+                                            <span>{{ instructor.username }}</span>
+                                        </div>
+                                        <div class="badge badge-outline badge-sm font-mono">{{ instructor.id }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="checkbox" name="instructors" value="{{ instructor.id }}" class="hidden"
+                                id="instructor_{{ instructor.id }}">
+                        </div>
+                        {% empty %}
+                        <div class="col-span-full text-center opacity-70">
+                            No instructors available to add
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if paginated_instructors.paginator.num_pages > 1 %}
+                <div class="flex justify-center items-center gap-4 my-4">
+                    <div class="join">
+                        <button type="button"
+                            onclick="window.location.href='?page={% if paginated_instructors.has_previous %}{{ paginated_instructors.previous_page_number }}{% else %}1{% endif %}&enrolled_page={{ enrolled_instructors.number }}'"
+                            class="join-item btn btn-neutral" {% if not paginated_instructors.has_previous %}disabled{%
+                            endif %}>«</button>
+                        <button class="join-item btn btn-neutral">
+                            <span id="currentPage">{{ paginated_instructors.number }}</span> / <span id="totalPages">{{
+                                paginated_instructors.paginator.num_pages }}</span>
+                        </button>
+                        <button type="button"
+                            onclick="window.location.href='?page={% if paginated_instructors.has_next %}{{ paginated_instructors.next_page_number }}{% else %}{{ paginated_instructors.paginator.num_pages }}{% endif %}&enrolled_page={{ enrolled_instructors.number }}'"
+                            class="join-item btn btn-neutral" {% if not paginated_instructors.has_next %}disabled{% endif
+                            %}>»</button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="flex justify-center items-center mt-4">
+                    <button type="submit" class="btn btn-primary gap-2" {% if not available_instructors %}disabled{% endif %}>
+                        <i class="fas fa-plus"></i>
+                        Add Selected Instructors
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
     function filterInstructors(query) {
-        const instructors = document.querySelectorAll('.instructor-item');
+        const instructors = document.querySelectorAll('.enrolled-instructor-item');
         const lowercaseQuery = query.toLowerCase().trim();
         let visibleCount = 0;
-        
+
         instructors.forEach(instructor => {
             const name = instructor.querySelector('.instructor-name').textContent.toLowerCase();
-            const id = instructor.querySelector('.instructor-id').textContent.toLowerCase();
-            
-            const isVisible = name.includes(lowercaseQuery) || 
-                            id.includes(lowercaseQuery);
-            
-            instructor.style.display = isVisible ? 'flex' : 'none';
+            const id = instructor.querySelector('.badge-outline').textContent.toLowerCase();
+            const username = instructor.querySelector('.fa-user + span').textContent.toLowerCase();
+
+            const isVisible = name.includes(lowercaseQuery) ||
+                id.includes(lowercaseQuery) ||
+                username.includes(lowercaseQuery);
+
+            instructor.style.display = isVisible ? 'block' : 'none';
             if (isVisible) visibleCount++;
         });
 
-        document.getElementById('instructor-count').textContent = `(${visibleCount})`;
+        document.querySelector('.badge-primary').textContent = visibleCount;
     }
 
     function filterAvailableInstructors(query) {
         const instructors = document.querySelectorAll('.instructor-item');
         const lowercaseQuery = query.toLowerCase().trim();
         let visibleCount = 0;
-        
+
         instructors.forEach(instructor => {
             const name = instructor.querySelector('.instructor-name').textContent.toLowerCase();
-            const id = instructor.querySelector('.instructor-id').textContent.toLowerCase();
-            
-            const isVisible = name.includes(lowercaseQuery) || 
-                            id.includes(lowercaseQuery);
-            
-            instructor.style.display = isVisible ? 'flex' : 'none';
+            const id = instructor.querySelector('.badge-outline').textContent.toLowerCase();
+            const username = instructor.querySelector('.fa-user + span').textContent.toLowerCase();
+
+            const isVisible = name.includes(lowercaseQuery) ||
+                id.includes(lowercaseQuery) ||
+                username.includes(lowercaseQuery);
+
+            instructor.style.display = isVisible ? 'block' : 'none';
             if (isVisible) visibleCount++;
         });
 
-        document.getElementById('available-count').textContent = `(${visibleCount})`;
+        document.querySelector('.badge-secondary').textContent = visibleCount;
     }
-    
+
     function toggleInstructorSelection(element, id) {
-        const checkbox = document.getElementById('instructor_' + id) || document.getElementById('remove_instructor_' + id);
+        const checkbox = document.getElementById('instructor_' + id);
         checkbox.checked = !checkbox.checked;
-        
+
         if (checkbox.checked) {
-            element.classList.add('border-blue-500');
-            element.classList.remove('border-transparent');
+            element.classList.add('border-primary');
+            element.querySelector('.badge').classList.remove('opacity-0');
+            element.querySelector('.bg-gradient-to-br').classList.remove('opacity-0');
         } else {
-            element.classList.remove('border-blue-500');
-            element.classList.add('border-transparent');
+            element.classList.remove('border-primary');
+            element.querySelector('.badge').classList.add('opacity-0');
+            element.querySelector('.bg-gradient-to-br').classList.add('opacity-0');
+        }
+    }
+
+    function toggleEnrolledInstructorSelection(element, id) {
+        const checkbox = document.getElementById('remove_instructor_' + id);
+        checkbox.checked = !checkbox.checked;
+
+        if (checkbox.checked) {
+            element.classList.add('border-error');
+            element.querySelector('.badge').classList.remove('opacity-0');
+            element.querySelector('.bg-gradient-to-br').classList.remove('opacity-0');
+        } else {
+            element.classList.remove('border-error');
+            element.querySelector('.badge').classList.add('opacity-0');
+            element.querySelector('.bg-gradient-to-br').classList.add('opacity-0');
         }
     }
 
@@ -143,10 +277,53 @@
         return confirm('Are you sure you want to remove the selected instructors from this section?');
     }
 
-    // Initialize display on page load
-    document.addEventListener('DOMContentLoaded', function() {
+    function getItemsPerPage() {
+        const width = window.innerWidth;
+        if (width >= 1280) { // xl screens (4 columns)
+            return 16; // 4 rows
+        } else if (width >= 1024) { // lg screens (3 columns)
+            return 12; // 4 rows
+        } else if (width >= 768) { // md screens (2 columns)
+            return 8; // 4 rows
+        } else { // sm screens (1 column)
+            return 4; // 4 rows
+        }
+    }
+
+    // Function to update pagination URLs
+    function updatePaginationUrls() {
+        const itemsPerPage = getItemsPerPage();
+        const enrolledButtons = document.querySelectorAll('.enrolled-instructor-item + .join button');
+        const instructorButtons = document.querySelectorAll('.instructor-item + .join button');
+
+        // Update enrolled instructors pagination
+        enrolledButtons.forEach(button => {
+            if (button.onclick) {
+                const currentUrl = button.getAttribute('onclick').match(/'([^']+)'/)[1];
+                const url = new URL(currentUrl, window.location.href);
+                url.searchParams.set('enrolled_per_page', itemsPerPage);
+                button.setAttribute('onclick', `window.location.href='${url.toString()}'`);
+            }
+        });
+
+        // Update available instructors pagination
+        instructorButtons.forEach(button => {
+            if (button.onclick) {
+                const currentUrl = button.getAttribute('onclick').match(/'([^']+)'/)[1];
+                const url = new URL(currentUrl, window.location.href);
+                url.searchParams.set('per_page', itemsPerPage);
+                button.setAttribute('onclick', `window.location.href='${url.toString()}'`);
+            }
+        });
+    }
+
+    // Update pagination on page load and window resize
+    document.addEventListener('DOMContentLoaded', function () {
         filterInstructors('');
         filterAvailableInstructors('');
+        updatePaginationUrls();
     });
+
+    window.addEventListener('resize', updatePaginationUrls);
 </script>
 {% endblock %} 

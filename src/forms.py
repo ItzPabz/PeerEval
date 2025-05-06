@@ -531,16 +531,39 @@ class GroupFormationMethodForm(forms.Form):
     
     method = forms.ChoiceField(
         choices=METHODS,
-        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+        required=True,
+        error_messages={'required': 'Please select a group formation method.'},
+        widget=forms.RadioSelect(attrs={'class': 'join-item btn flex-1'})
     )
     
     group_size = forms.IntegerField(
         min_value=2,
         max_value=10,
+        required=True,
+        error_messages={
+            'required': 'Please enter a group size.',
+            'min_value': 'Group size must be at least 2.',
+            'max_value': 'Group size cannot exceed 10.'
+        },
         initial=4,
         widget=forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
     )
     
+    def clean(self):
+        cleaned_data = super().clean()
+        method = cleaned_data.get('method')
+        group_size = cleaned_data.get('group_size')
+        
+        if not method:
+            self.add_error('method', 'Please select a group formation method.')
+        if not group_size:
+            self.add_error('group_size', 'Please enter a group size.')
+        elif group_size < 2:
+            self.add_error('group_size', 'Group size must be at least 2.')
+        elif group_size > 10:
+            self.add_error('group_size', 'Group size cannot exceed 10.')
+            
+        return cleaned_data
 
 class PasswordResetRequestForm(forms.Form):
     first_name = forms.CharField(

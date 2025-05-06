@@ -1,224 +1,377 @@
 {% extends "base.html" %}
-{% block title %}Manage Section Groups - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
+{% block title %}Manage Groups - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
 
 {% block content %}
 <div class="flex flex-col gap-4">
     <div class="flex flex-row gap-2 items-center justify-between">
-        <h1 class="text-2xl font-bold">Manage Groups for {{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</h1>
-        <div class="flex flex-row gap-2">
-            <a href="{% url 'index' %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Dashboard</a>
-            <span class="text-zinc-600 dark:text-zinc-400">/</span>
-            <a href="{% url 'section_dashboard' section.id %}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">{{ section.course.department.id }}{{ section.course.course_code }} - Section {{ section.section_number }}</a>
-            <span class="text-zinc-600 dark:text-zinc-400">/</span>
-            <span class="text-zinc-600 dark:text-zinc-400">Manage Groups</span>
+        <h1 class="text-2xl font-bold">{{ section.term.name }} {{ section.course.department.id }}{{
+            section.course.course_code }}-{{ section.section_number }} Groups</h1>
+        <div class="text-sm breadcrumbs">
+            <ul>
+                <li><a href="{% url 'index' %}" class="text-primary">Dashboard</a></li>
+                <li><a href="{% url 'section_dashboard' section.id %}" class="text-primary">{{ section.term.name }} {{
+                        section.course.department.id }}{{ section.course.course_code }}-{{ section.section_number }}</a>
+                </li>
+                <li>Manage Groups</li>
+            </ul>
         </div>
     </div>
+    <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
+        <c-stat_full title="Number of Groups" value="{{ groups.count }}" />
+        <c-stat_full title="Number of Students" value="{{ students.count }}" />
+        <c-stat_full title="Average Group Size" value="{{ avg_group_size|floatformat:0 }}" />
+        {% if unassigned_students.count > 0 %}
+            <c-stat_full title="Unassigned Students" value="{{ unassigned_students.count }}" />
+        {% endif %}
+    </div>
+</div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
-            <h2 class="text-lg font-bold">Automatic Group Formation</h2>
+<div class="w-full my-4 flex gap-2 justify-between">
+    <button class="btn btn-primary flex-1" onclick="document.getElementById('reform_groups_modal').showModal()">
+        <i class="fas fa-redo-alt"></i>
+        Re-Form Groups
+    </button>
+    <form method="POST" class="flex-1" id="add-group-form">
+        {% csrf_token %}
+        <input type="hidden" name="add_group" value="true" />
+        <button type="submit" class="btn btn-primary w-full">
+            <i class="fas fa-plus"></i>
+            Add Group
+        </button>
+    </form>
+</div>
+
+<div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4 card bg-base-200 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Current Group Assignments</h2>
             
-            <form method="POST" id="group-formation-form">
+            <form id="group-form" method="POST">
                 {% csrf_token %}
-                <div class="mb-4">
-                    <label class="block text-sm font-bold mb-2">METHOD</label>
-                    <div class="flex flex-col gap-2">
-                        {% for choice in form.method %}
-                            <div class="flex items-center">
-                                {{ choice.tag }}
-                                <label for="{{ choice.id_for_label }}" class="ml-2">{{ choice.choice_label }}</label>
+                <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="card bg-base-300 shadow-lg" data-group-id="unassigned">
+                        <div class="card-body">
+                            <h3 class="card-title text-md">Unassigned Students</h3>
+                            <div class="student-list min-h-[200px]" id="unassigned-students">
+                                {% for student in unassigned_students %}
+                                    <div class="student-item flex justify-between items-center bg-base-100 p-2 mb-2 rounded cursor-move hover:bg-base-200 transition-colors" draggable="true" data-student-id="{{ student.user_id.id }}">
+                                        <span>{{ student.user_id.first_name }} {{ student.user_id.last_name }}</span>
+                                        <input type="hidden" name="student_{{ student.user_id.id }}" value="unassigned">
+                                    </div>
+                                {% endfor %}
+                                
+                                {% if unassigned_students.count == 0 %}
+                                    <div class="p-2 text-center text-base-content/60">
+                                        No unassigned students found.
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <label for="id_group_size" class="block text-sm font-bold mb-2">GROUP SIZE</label>
-                    {{ form.group_size }}
-                </div>
-                
-                <button type="submit" name="form_groups" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="return confirmGroupFormation()">
-                    Create Groups
-                </button>
-            </form>
-        </div>
-
-                <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
-            <h2 class="text-lg font-bold">Manual Group Management</h2>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400">Drag and drop students between groups to manually assign them.</p>
-            
-            <button id="add-group-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mb-4">
-                Add New Group
-            </button>
-            
-            <div class="text-sm">
-                <p>Total students: {{ students.count }}</p>
-                <p>Total groups: <span id="total-groups">{{ groups.count }}</span></p>
-                <p>Unassigned students: {{ unassigned_students.count }}</p>
-            </div>
-        </div>
-    </div>
-
-        <div class="flex flex-col gap-4 bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700">
-        <h2 class="text-lg font-bold">Current Group Assignments</h2>
-        
-        <form id="group-form" method="POST" onsubmit="return confirmSaveChanges()">
-            {% csrf_token %}
-            <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div class="group-container bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm" data-group-id="unassigned">
-                    <h3 class="text-md font-bold mb-4">Unassigned Students</h3>
-                    <div class="student-list min-h-[200px]" id="unassigned-students">
-                        {% for student in unassigned_students %}
-                            <div class="student-item flex justify-between items-center bg-zinc-200 dark:bg-zinc-800 p-2 mb-2 rounded cursor-move" draggable="true" data-student-id="{{ student.user_id.id }}">
-                                <span>{{ student.user_id.first_name }} {{ student.user_id.last_name }}</span>
-                                <input type="hidden" name="student_{{ student.user_id.id }}" value="unassigned">
-                            </div>
-                        {% endfor %}
-                        
-                        {% if unassigned_students.count == 0 %}
-                            <div class="p-2 text-center text-zinc-600 dark:text-zinc-400">
-                                No unassigned students found.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                                {% for group_item in group_list %}
-                    <div class="group-container bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm" data-group-id="{{ group_item.group.id }}">
-                        <h3 class="text-md font-bold mb-4">Group {{ group_item.group.name }}</h3>
-                        <div class="student-list min-h-[200px]" id="group-{{ group_item.group.id }}">
-                            {% for student in group_item.students %}
-                                <div class="student-item flex justify-between items-center bg-zinc-200 dark:bg-zinc-800 p-2 mb-2 rounded cursor-move" draggable="true" data-student-id="{{ student.user_id.id }}">
-                                    <span>{{ student.user_id.first_name }} {{ student.user_id.last_name }}</span>
-                                    <input type="hidden" name="student_{{ student.user_id.id }}" value="{{ group_item.group.id }}">
-                                </div>
-                            {% endfor %}
-                            
-                            {% if group_item.count == 0 %}
-                                <div class="p-2 text-center text-zinc-600 dark:text-zinc-400">
-                                    No students in this group.
-                                </div>
-                            {% endif %}
                         </div>
                     </div>
-                {% endfor %}
-            </div>
-            
-            <div class="mt-6 flex justify-end">
-                <button type="submit" name="save_groups" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Save Group Assignments
+                    
+                    {% for group_item in group_list %}
+                        <div class="card bg-base-300 shadow-lg" data-group-id="{{ group_item.group.id }}">
+                            <div class="card-body">
+                                <h3 class="card-title text-md">Group {{ group_item.group.name }}</h3>
+                                <div class="student-list min-h-[200px]" id="group-{{ group_item.group.id }}">
+                                    {% for student in group_item.students %}
+                                        <div class="student-item flex justify-between items-center bg-base-100 p-2 mb-2 rounded cursor-move hover:bg-base-200 transition-colors" draggable="true" data-student-id="{{ student.user_id.id }}">
+                                            <span>{{ student.user_id.first_name }} {{ student.user_id.last_name }}</span>
+                                            <input type="hidden" name="student_{{ student.user_id.id }}" value="{{ group_item.group.id }}">
+                                        </div>
+                                    {% endfor %}
+                                    
+                                    {% if group_item.count == 0 %}
+                                        <div class="p-2 text-center text-base-content/60">
+                                            No students in this group.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="card-actions justify-end mt-6">
+                    <button type="submit" name="save_groups" class="btn btn-primary">
+                        Save Group Assignments
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<dialog id="reform_groups_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold">Re-Form Groups</h3>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="form_groups" value="true" />
+            <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+                <legend class="fieldset-legend">Group Formation Method</legend>
+                
+                <div class="join w-full">
+                    <input class="join-item btn flex-1" type="radio" name="method" value="random" aria-label="Random Groups" required />
+                    <input class="join-item btn flex-1" type="radio" name="method" value="merit" aria-label="Merit-Based Groups" required />
+                </div>
+                
+                <div class="mt-4">
+                    <label class="label">Group Size</label>
+                    {{ form.group_size }}
+                </div>
+            </fieldset>
+
+            <div class="modal-action w-full">
+                <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('reform_groups_modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary flex-1">
+                    Create Groups
                 </button>
             </div>
         </form>
     </div>
-</div>
+</dialog>
+
+<!-- Group Formation Confirmation Modal -->
+<dialog id="confirm_group_formation_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold">Confirm Group Formation</h3>
+        <p id="group_formation_message" class="py-4"></p>
+        <div class="modal-action w-full">
+            <form method="dialog">
+                <button class="btn btn-neutral">Cancel</button>
+            </form>
+            <form id="final-group-formation-form" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="form_groups" value="true" />
+                <input type="hidden" name="method" id="confirm-method" />
+                <input type="hidden" name="group_size" id="confirm-group-size" />
+                <button type="submit" class="btn btn-primary">Create Groups</button>
+            </form>
+        </div>
+    </div>
+</dialog>
+
+<!-- Save Changes Confirmation Modal -->
+<dialog id="confirm_save_changes_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold">Save Group Changes</h3>
+        <p class="py-4">Are you sure you want to save these group assignments?</p>
+        <div class="modal-action w-full">
+            <form method="dialog">
+                <button class="btn btn-neutral">Cancel</button>
+            </form>
+            <form id="group-form" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="save_groups" value="true" />
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</dialog>
+
+<!-- Add Group Modal -->
+<dialog id="add_group_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold">Add New Group</h3>
+        <form method="POST" id="add-group-form">
+            {% csrf_token %}
+            <input type="hidden" name="add_group" value="true" />
+            
+            <div class="form-control w-full">
+                <label class="label">
+                    <span class="label-text">Group Name</span>
+                </label>
+                <input type="text" name="group_name" placeholder="Enter group name" class="input input-bordered w-full" required />
+                <label class="label">
+                    <span class="label-text-alt">Leave empty for auto-generated name</span>
+                </label>
+            </div>
+
+            <div class="modal-action w-full">
+                <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('add_group_modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary flex-1">
+                    Create Group
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize drag and drop functionality
-    let dragged;
-    let groupCounter = parseInt('{{ groups.count }}') - 1;  // Subtract 1 to exclude unassigned group
+function confirmGroupFormation() {
+    const method = document.querySelector('input[name="method"]:checked');
+    const groupSize = document.getElementById('id_group_size');
     
-    // Add new group button
-    document.getElementById('add-group-btn').addEventListener('click', function() {
-        groupCounter++;
-        const newGroupId = `new-group-${groupCounter}`;
-        const groupName = `${groupCounter}`;
+    if (!method || !groupSize.value) {
+        return false;
+    }
+    
+    const totalStudents = parseInt('{{ students.count }}');
+    const totalGroups = Math.ceil(totalStudents / groupSize.value);
+    
+    const message = 'This will create ' + totalGroups + ' groups of ' + groupSize.value + ' students each using ' + method.value + ' distribution.\n\n' +
+                   'This will delete all existing groups and create new ones.';
+    
+    // Set the values in the confirmation form
+    document.getElementById('confirm-method').value = method.value;
+    document.getElementById('confirm-group-size').value = groupSize.value;
+    
+    document.getElementById('group_formation_message').textContent = message;
+    document.getElementById('confirm_group_formation_modal').showModal();
+    return false;
+}
+
+// Icon handling function
+function updateIcons() {
+    const groups = document.querySelectorAll('.student-list');
+    groups.forEach(group => {
+        const items = group.querySelectorAll('.student-item');
+        const emptyMessage = group.querySelector('.text-base-content\\/60');
         
-        const newGroupContainer = document.createElement('div');
-        newGroupContainer.className = 'group-container bg-zinc-300 dark:bg-zinc-700 p-4 rounded-lg shadow-sm';
-        newGroupContainer.dataset.groupId = newGroupId;
-        
-        newGroupContainer.innerHTML = `
-            <h3 class="text-md font-bold mb-4">Group ${groupName}</h3>
-            <div class="student-list min-h-[200px]" id="group-${newGroupId}">
-                <div class="p-2 text-center text-zinc-600 dark:text-zinc-400">
-                    No students in this group.
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('groups-container').appendChild(newGroupContainer);
-        document.getElementById('total-groups').textContent = groupCounter;
-        initDragAndDrop();
+        // Show/hide empty message based on items count
+        if (items.length === 0 && !emptyMessage) {
+            const noStudentsDiv = document.createElement('div');
+            noStudentsDiv.className = 'p-2 text-center text-base-content/60';
+            noStudentsDiv.textContent = 'No students in this group.';
+            group.appendChild(noStudentsDiv);
+        } else if (items.length > 0 && emptyMessage) {
+            emptyMessage.remove();
+        }
     });
-    
-    initDragAndDrop();
-    
-    function initDragAndDrop() {
-        // Add event listeners for all draggable items
-        document.querySelectorAll('.student-item').forEach(item => {
-            item.addEventListener('dragstart', function(e) {
-                dragged = this;
-                this.style.opacity = '0.4';
-            });
-            
-            item.addEventListener('dragend', function(e) {
-                this.style.opacity = '1';
-            });
+}
+
+// Drag and Drop Implementation
+document.addEventListener('DOMContentLoaded', function() {
+    const studentItems = document.querySelectorAll('.student-item');
+    const studentLists = document.querySelectorAll('.student-list');
+
+    // Add drag start event to all draggable items
+    studentItems.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', e.target.dataset.studentId);
+            item.classList.add('opacity-50');
         });
-        
-        // Add event listeners for all drop targets
-        document.querySelectorAll('.student-list').forEach(list => {
-            list.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                this.classList.add('bg-blue-100', 'dark:bg-blue-900');
-            });
+
+        item.addEventListener('dragend', (e) => {
+            item.classList.remove('opacity-50');
+            updateIcons(); // Update icons after drag ends
+        });
+    });
+
+    // Add drop zone events to all student lists
+    studentLists.forEach(list => {
+        list.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const dropZone = e.currentTarget;
+            dropZone.classList.add('bg-base-200', 'border-2', 'border-dashed', 'border-primary');
+        });
+
+        list.addEventListener('dragleave', (e) => {
+            e.currentTarget.classList.remove('bg-base-200', 'border-2', 'border-dashed', 'border-primary');
+        });
+
+        list.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const dropZone = e.currentTarget;
+            dropZone.classList.remove('bg-base-200', 'border-2', 'border-dashed', 'border-primary');
             
-            list.addEventListener('dragleave', function(e) {
-                this.classList.remove('bg-blue-100', 'dark:bg-blue-900');
-            });
+            const studentId = e.dataTransfer.getData('text/plain');
+            const studentElement = document.querySelector(`[data-student-id="${studentId}"]`);
             
-            list.addEventListener('drop', function(e) {
-                e.preventDefault();
-                this.classList.remove('bg-blue-100', 'dark:bg-blue-900');
+            if (studentElement) {
+                // Get the group ID from the parent container
+                const newGroupContainer = dropZone.closest('[data-group-id]');
+                const newGroupId = newGroupContainer.dataset.groupId;
                 
-                // Get the group ID from parent container
-                const groupId = this.closest('.group-container').dataset.groupId;
-                
-                // Update the hidden input value
-                const studentId = dragged.dataset.studentId;
-                const hiddenInput = dragged.querySelector('input[type="hidden"]');
-                hiddenInput.value = groupId;
-                
-                // Remove any "no students" messages
-                const noStudentsMsg = this.querySelector('.text-center');
-                if (noStudentsMsg) {
-                    noStudentsMsg.remove();
+                // Update the hidden input value with the new group assignment
+                const hiddenInput = studentElement.querySelector('input[type="hidden"]');
+                if (hiddenInput) {
+                    hiddenInput.value = newGroupId;
                 }
                 
                 // Move the element
-                if (this !== dragged.parentNode) {
-                    dragged.parentNode.removeChild(dragged);
-                    this.appendChild(dragged);
-                    
-                    // Add "no students" message if container is now empty
-                    if (dragged.parentNode.children.length === 0) {
-                        const noStudentsElement = document.createElement('div');
-                        noStudentsElement.className = 'p-2 text-center text-zinc-600 dark:text-zinc-400';
-                        noStudentsElement.textContent = 'No students in this group.';
-                        dragged.parentNode.appendChild(noStudentsElement);
-                    }
-                }
-            });
+                dropZone.appendChild(studentElement);
+                
+                // Update icons and empty states
+                updateIcons();
+            }
+        });
+    });
+
+    // Initial icon update
+    updateIcons();
+
+    // Handle the form submission with modal
+    const initialForm = document.getElementById('initial-group-formation-form');
+    if (initialForm) {
+        initialForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const method = document.querySelector('input[name="method"]:checked');
+            const groupSize = document.getElementById('id_group_size');
+            
+            if (method && groupSize.value) {
+                confirmGroupFormation();
+            } else {
+                this.submit();
+            }
+        });
+    }
+
+    // Update the form submission to use the modal
+    const groupForm = document.getElementById('group-form');
+    if (groupForm) {
+        groupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Ensure we have the save_groups field
+            let saveGroupsInput = this.querySelector('input[name="save_groups"]');
+            if (!saveGroupsInput) {
+                saveGroupsInput = document.createElement('input');
+                saveGroupsInput.type = 'hidden';
+                saveGroupsInput.name = 'save_groups';
+                saveGroupsInput.value = 'true';
+                this.appendChild(saveGroupsInput);
+            }
+
+            // Debug: Log form data before submission
+            const formData = new FormData(this);
+            console.log('Form data before submission:');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+            
+            document.getElementById('confirm_save_changes_modal').showModal();
+        });
+    }
+
+    // Handle the actual form submission when confirmed in the modal
+    const confirmSaveForm = document.querySelector('#confirm_save_changes_modal form:not([method="dialog"])');
+    if (confirmSaveForm) {
+        confirmSaveForm.addEventListener('submit', function() {
+            const mainForm = document.getElementById('group-form');
+            mainForm.submit();
+        });
+    }
+
+    // Add Group Form Handler
+    const addGroupForm = document.getElementById('add-group-form');
+    if (addGroupForm) {
+        addGroupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get the form data
+            const formData = new FormData(this);
+            
+            // If no group name is provided, remove it from the form data
+            if (!formData.get('group_name').trim()) {
+                formData.delete('group_name');
+            }
+            
+            // Submit the form
+            this.submit();
         });
     }
 });
-
-function confirmGroupFormation() {
-    const method = document.querySelector('input[name="method"]:checked').value;
-    const groupSize = document.getElementById('id_group_size').value;
-    const totalStudents = parseInt('{{ students.count }}');
-    const totalGroups = Math.ceil(totalStudents / groupSize);
-    
-    let message = 'This will create ' + totalGroups + ' groups of ' + groupSize + ' students each using ' + method + ' distribution.\n\n';
-    message += 'This will delete all existing groups and create new ones. Are you sure you want to proceed?';
-    
-    return confirm(message);
-}
-
-function confirmSaveChanges() {
-    return confirm('Are you sure you want to save these group assignments?');
-}
 </script>
 {% endblock %} 

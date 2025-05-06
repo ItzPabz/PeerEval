@@ -1054,110 +1054,128 @@ def section_manage_groups(request, section_id):
             'count': len(group_students)
         })
     
-    form = GroupFormationMethodForm()
+    # Calculate average group size
+    total_students = students.count()
+    total_groups = groups.count()
+    avg_group_size = round(total_students / total_groups, 1) if total_groups > 0 else 0
+    
+    # Check for unassigned students and show message
+    unassigned_count = unassigned_students.count()
+    if unassigned_count > 0:
+        messages.warning(request, f'There are {unassigned_count} unassigned student{"s" if unassigned_count != 1 else ""} that need to be placed in groups.')
     
     if request.method == 'POST':
-        if 'form_groups' in request.POST:
+        if 'add_group' in request.POST:
+            # Get the highest numbered group
+            highest_group = groups.order_by('-name').first()
+            try:
+                next_number = int(highest_group.name) + 1 if highest_group else 1
+            except ValueError:
+                # If the group name isn't a number, just use the count + 1
+                next_number = groups.count() + 1
+            
+            # Create the new group
+            new_group = Groups.objects.create(
+                name=str(next_number),
+                section_id=section
+            )
+            messages.success(request, f'Created new group {new_group.name}')
+            return redirect('section_manage_groups', section_id=section_id)
+        elif 'form_groups' in request.POST:
             form = GroupFormationMethodForm(request.POST)
             if form.is_valid():
-                method = form.cleaned_data['method']
-                group_size = form.cleaned_data['group_size']
-                
-                all_students = list(students)
-                
-                Groups.objects.filter(section_id=section).delete()
-                
-                if method == 'random':
-                    import random
-                    random.shuffle(all_students)
-                else:
-                    student_scores = []
-                    for student in all_students:
-                        merit_scores = MeritScores.objects.filter(
-                            evaluation_id__evaluatee_id=student.user_id,
-                            evaluation_id__assignment_id__section_id=section
-                        )
-                        
-                        if merit_scores.exists():
-                            avg_scores = {
-                                'workcontribution': merit_scores.aggregate(avg=models.Avg('score_workcontribution'))['avg'],
-                                'teaminteraction': merit_scores.aggregate(avg=models.Avg('score_teaminteraction'))['avg'],
-                                'teamawareness': merit_scores.aggregate(avg=models.Avg('score_teamawareness'))['avg'],
-                                'qualityofwork': merit_scores.aggregate(avg=models.Avg('score_qualityofwork'))['avg'],
-                                'knowledgeandskills': merit_scores.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg']
-                            }
+                try:
+                    method = form.cleaned_data['method']
+                    group_size = form.cleaned_data['group_size']
+                    
+                    if total_students < group_size:
+                        messages.error(request, f'Group size ({group_size}) cannot be larger than total number of students ({total_students})')
+                        context = {
+                            'section': section,
+                            'students': students,
+                            'groups': groups,
+                            'unassigned_students': unassigned_students,
+                            'group_list': group_list,
+                            'form': form,
+                            'avg_group_size': avg_group_size,
+                        }
+                        return render(request, 'instructor/add_forms/section_groups.html', context)
+                    
+                    all_students = list(students)
+                    
+                    # Delete existing groups
+                    Groups.objects.filter(section_id=section).delete()
+                    
+                    if method == 'random':
+                        import random
+                        random.shuffle(all_students)
+                    else:
+                        student_scores = []
+                        for student in all_students:
+                            merit_scores = MeritScores.objects.filter(
+                                evaluation_id__evaluatee_id=student.user_id,
+                                evaluation_id__assignment_id__section_id=section
+                            )
                             
-                            overall_avg = sum(avg_scores.values()) / len(avg_scores)
-                        else:
-                            overall_avg = 3.0 
-                        
-                        student_scores.append((student, overall_avg))
-                    
-                    student_scores.sort(key=lambda x: x[1], reverse=True)
-                    all_students = [student for student, _ in student_scores]
-                
-                Enrollments.objects.filter(section_id=section).update(group=None)
-                
-                current_group = 1
-                groups = []
-                
-                for i in range(0, len(all_students), group_size):
-                    group = Groups.objects.create(
-                        name=str(current_group),
-                        section_id=section
-                    )
-                    groups.append(group)
-                    
-                    for student in all_students[i:i + group_size]:
-                        student.group = group
-                        student.save()
-                    
-                    current_group += 1
-                
-                leftover_students = []
-                for group in groups:
-                    group_students = list(Enrollments.objects.filter(group=group))
-                    if len(group_students) < group_size - 1:
-                        leftover_students.extend(group_students)
-                        group.delete()
-                
-                if leftover_students:
-                    non_empty_groups = Groups.objects.filter(section_id=section).annotate(
-                        student_count=models.Count('enrollments')
-                    ).filter(student_count__gt=0)
-                    
-                    if non_empty_groups.exists():
-                        for student in leftover_students:
-                            if method == 'random':
-
-                                import random
-                                target_group = random.choice(list(non_empty_groups))
-                            else:
-
-                                student_score = MeritScores.objects.filter(
-                                    evaluation_id__evaluatee_id=student.user_id,
-                                    evaluation_id__assignment_id__section_id=section
-                                ).aggregate(
-                                    avg=models.Avg(
-                                        (models.F('score_workcontribution') +
-                                         models.F('score_teaminteraction') +
-                                         models.F('score_teamawareness') +
-                                         models.F('score_qualityofwork') +
-                                         models.F('score_knowledgeandskills')) / 5
-                                    )
-                                )['avg'] or 3.0
+                            if merit_scores.exists():
+                                avg_scores = {
+                                    'workcontribution': merit_scores.aggregate(avg=models.Avg('score_workcontribution'))['avg'],
+                                    'teaminteraction': merit_scores.aggregate(avg=models.Avg('score_teaminteraction'))['avg'],
+                                    'teamawareness': merit_scores.aggregate(avg=models.Avg('score_teamawareness'))['avg'],
+                                    'qualityofwork': merit_scores.aggregate(avg=models.Avg('score_qualityofwork'))['avg'],
+                                    'knowledgeandskills': merit_scores.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg']
+                                }
                                 
-                                min_diff = float('inf')
-                                target_group = None
-                                for group in non_empty_groups:
-                                    current_size = Enrollments.objects.filter(group=group).count()
-                                    if current_size >= group_size:
-                                        continue
-                                        
-                                    group_avg = MeritScores.objects.filter(
-                                        evaluation_id__evaluatee_id__in=Enrollments.objects.filter(
-                                            group=group
-                                        ).values_list('user_id', flat=True),
+                                overall_avg = sum(avg_scores.values()) / len(avg_scores)
+                            else:
+                                overall_avg = 3.0 
+                            
+                            student_scores.append((student, overall_avg))
+                        
+                        student_scores.sort(key=lambda x: x[1], reverse=True)
+                        all_students = [student for student, _ in student_scores]
+                    
+                    # Reset all student group assignments
+                    Enrollments.objects.filter(section_id=section).update(group=None)
+                    
+                    # Create new groups and assign students
+                    current_group = 1
+                    groups = []
+                    
+                    for i in range(0, len(all_students), group_size):
+                        group = Groups.objects.create(
+                            name=str(current_group),
+                            section_id=section
+                        )
+                        groups.append(group)
+                        
+                        for student in all_students[i:i + group_size]:
+                            student.group = group
+                            student.save()
+                        
+                        current_group += 1
+                    
+                    # Handle leftover students
+                    leftover_students = []
+                    for group in groups:
+                        group_students = list(Enrollments.objects.filter(group=group))
+                        if len(group_students) < group_size - 1:
+                            leftover_students.extend(group_students)
+                            group.delete()
+                    
+                    if leftover_students:
+                        non_empty_groups = Groups.objects.filter(section_id=section).annotate(
+                            student_count=models.Count('enrollments')
+                        ).filter(student_count__gt=0)
+                        
+                        if non_empty_groups.exists():
+                            for student in leftover_students:
+                                if method == 'random':
+                                    import random
+                                    target_group = random.choice(list(non_empty_groups))
+                                else:
+                                    student_score = MeritScores.objects.filter(
+                                        evaluation_id__evaluatee_id=student.user_id,
                                         evaluation_id__assignment_id__section_id=section
                                     ).aggregate(
                                         avg=models.Avg(
@@ -1169,84 +1187,113 @@ def section_manage_groups(request, section_id):
                                         )
                                     )['avg'] or 3.0
                                     
-                                    diff = abs(student_score - group_avg)
-                                    if diff < min_diff:
-                                        min_diff = diff
-                                        target_group = group
-                            
-                            if not target_group:
-                                target_group = non_empty_groups.order_by('student_count').first()
-                            
-                            student.group = target_group
-                            student.save()
-                
-                messages.info(request, f'Students have been assigned to groups using {method} distribution')
-                return redirect('section_manage_groups', section_id=section_id)
+                                    min_diff = float('inf')
+                                    target_group = None
+                                    for group in non_empty_groups:
+                                        current_size = Enrollments.objects.filter(group=group).count()
+                                        if current_size >= group_size:
+                                            continue
+                                            
+                                        group_avg = MeritScores.objects.filter(
+                                            evaluation_id__evaluatee_id__in=Enrollments.objects.filter(
+                                                group=group
+                                            ).values_list('user_id', flat=True),
+                                            evaluation_id__assignment_id__section_id=section
+                                        ).aggregate(
+                                            avg=models.Avg(
+                                                (models.F('score_workcontribution') +
+                                                 models.F('score_teaminteraction') +
+                                                 models.F('score_teamawareness') +
+                                                 models.F('score_qualityofwork') +
+                                                 models.F('score_knowledgeandskills')) / 5
+                                            )
+                                        )['avg'] or 3.0
+                                        
+                                        diff = abs(student_score - group_avg)
+                                        if diff < min_diff:
+                                            min_diff = diff
+                                            target_group = group
+                                
+                                if not target_group:
+                                    target_group = non_empty_groups.order_by('student_count').first()
+                                
+                                student.group = target_group
+                                student.save()
+                    
+                    messages.success(request, f'Students have been assigned to groups using {method} distribution')
+                    return redirect('section_manage_groups', section_id=section_id)
+                except Exception as e:
+                    messages.error(request, f'Error forming groups: {str(e)}')
             else:
                 for field, errors in form.errors.items():
                     for error in errors:
                         messages.error(request, f"{field.title()}: {error}")
         
         elif 'save_groups' in request.POST:
-            changes_made = 0
-            
-            for key, value in request.POST.items():
-                if key.startswith('student_'):
-                    student_id = key.replace('student_', '')
-                    group_id = value
-                    
-                    try:
+            try:
+                changes_made = 0
+                
+                for key, value in request.POST.items():
+                    if key.startswith('student_'):
+                        student_id = key.replace('student_', '')
+                        group_id = value
+                        
                         try:
                             user = Users.objects.get(id=student_id)
                             enrollment = Enrollments.objects.get(user_id=user, section_id=section)
-                        except Users.DoesNotExist:
-                            messages.warning(request, f"Could not find user with ID: {student_id}")
-                            continue
-                        
-                        if group_id == 'unassigned':
-                            if enrollment.group is not None:
-                                enrollment.group = None
-                                enrollment.save()
-                                changes_made += 1
-                        else:
-                            try:
-                                if group_id.startswith('new-group-'):
-                                    group_name = group_id.replace('new-group-', '')
-                                    new_group = Groups.objects.create(
-                                        name=group_name,
-                                        section_id=section
-                                    )
-                                    enrollment.group = new_group
+                            
+                            if group_id == 'unassigned':
+                                if enrollment.group is not None:
+                                    enrollment.group = None
                                     enrollment.save()
                                     changes_made += 1
-                                else:
-                                    group = Groups.objects.get(id=group_id, section_id=section)
-                                    if enrollment.group != group:
-                                        enrollment.group = group
+                            else:
+                                try:
+                                    if group_id.startswith('new-group-'):
+                                        group_name = group_id.replace('new-group-', '')
+                                        new_group = Groups.objects.create(
+                                            name=group_name,
+                                            section_id=section
+                                        )
+                                        enrollment.group = new_group
                                         enrollment.save()
                                         changes_made += 1
-                            except Groups.DoesNotExist:
-                                messages.warning(request, f'Could not find group with ID {group_id}')
-                                continue
-                    except Enrollments.DoesNotExist:
-                        messages.warning(request, f'Could not find enrollment for student ID {student_id} in section {section_id}')
-                        continue
-            
-            empty_groups = Groups.objects.filter(
-                section_id=section
-            ).annotate(
-                student_count=models.Count('enrollments')
-            ).filter(student_count=0)
-            
-            if empty_groups.exists():
-                empty_groups.delete()
-                messages.info(request, f'Removed {empty_groups.count()} empty groups')
-            
-            if changes_made > 0:
-                messages.info(request, f'Group assignments saved successfully! ({changes_made} changes made)')
-            else:
-                messages.info(request, 'No changes were made to group assignments.')
-            return redirect('section_dashboard', section_id=section_id)
+                                    else:
+                                        group = Groups.objects.get(id=group_id, section_id=section)
+                                        if enrollment.group != group:
+                                            enrollment.group = group
+                                            enrollment.save()
+                                            changes_made += 1
+                                except Groups.DoesNotExist:
+                                    messages.warning(request, f'Could not find group with ID {group_id}')
+                                    continue
+                        except Users.DoesNotExist:
+                            messages.warning(request, f'Could not find user with ID {student_id}')
+                            continue
+                        except Enrollments.DoesNotExist:
+                            messages.warning(request, f'Could not find enrollment for student ID {student_id} in section {section_id}')
+                            continue
+                
+                # Clean up empty groups
+                empty_groups = Groups.objects.filter(
+                    section_id=section
+                ).annotate(
+                    student_count=models.Count('enrollments')
+                ).filter(student_count=0)
+                
+                if empty_groups.exists():
+                    empty_groups.delete()
+                    messages.info(request, f'Removed {empty_groups.count()} empty groups')
+                
+                if changes_made > 0:
+                    messages.success(request, f'Group assignments saved successfully! ({changes_made} changes made)')
+                else:
+                    messages.info(request, 'No changes were made to group assignments.')
+                return redirect('section_dashboard', section_id=section_id)
+            except Exception as e:
+                messages.error(request, f'Error saving group assignments: {str(e)}')
+    else:
+        form = GroupFormationMethodForm()
     
     context = {
         'section': section,
@@ -1255,6 +1302,7 @@ def section_manage_groups(request, section_id):
         'unassigned_students': unassigned_students,
         'group_list': group_list,
         'form': form,
+        'avg_group_size': avg_group_size,
     }
     
     return render(request, 'instructor/add_forms/section_groups.html', context)
@@ -2073,7 +2121,7 @@ def server_error(request):
 
 @login_required
 def section_manage_instructors(request, section_id):
-    section = get_object_or_404(Sections, id=section_id)
+    section = get_object_or_404(Sections.objects.select_related('course', 'course__department', 'term'), id=section_id)
     
     if not request.user.is_superuser and not SectionInstructors.objects.filter(section_id=section, user_id=request.user).exists():
         messages.error(request, "You don't have permission to manage instructors for this section.")
