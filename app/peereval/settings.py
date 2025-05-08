@@ -51,13 +51,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-TAILWIND_APP_NAME = 'theme'
-
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
-
-NPM_BIN_PATH = 'npm.cmd'
 
 # Security Settings - Disabled for development
 SECURE_HSTS_SECONDS = 0
@@ -118,8 +114,12 @@ WSGI_APPLICATION = 'peereval.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'peereval'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
