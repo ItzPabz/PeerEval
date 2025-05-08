@@ -57,40 +57,32 @@ def get_flags(student_id, assignment_id):
 
     flags = []
 
-    # Low Performer
     if peer_avg and peer_avg < 2.5:
         flags.append({
             'type': 'error',
             'label': 'Low Performer',
             'instructor_msg': 'Student is performing below expectations with average rating < 2.5',
-            'student_msg': 'The members of your team indicated that your contributions to the team were below expectations. This report gives you details about how the members of your team perceived your team contributions in five key areas. Please use this information to identify problem areas in order to contribute effectively in future teamwork situations. Please contact your course instructor if you need assistance or if you believe that your ratings were inappropriate.'
         })
 
-    # Overconfident
     if self_score and peer_avg and (self_score - peer_avg) >= 1.0 and peer_avg < 3:
         flags.append({
             'type': 'warning',
             'label': 'Overconfident',
             'instructor_msg': 'Student rated themselves significantly higher than peer ratings',
-            'student_msg': 'Your self-ratings were significantly higher than your teammates\' ratings of your contributions to the team. The members of your team indicated that your contributions to the team were below expectations. This report gives you details about how the members of your team perceived your team contributions in five key areas. Please use this information to identify problem areas in order to contribute effectively in future teamwork situations. Please contact your course instructor if you need assistance or if you believe that your ratings were inappropriate.'
         })
 
-    # High Performer
     if peer_avg and peer_avg > 3.5 and team_avg and (peer_avg - team_avg) > 0.5:
         flags.append({
             'type': 'success',
             'label': 'High Performer',
             'instructor_msg': 'Student is performing exceptionally well with ratings significantly above team average',
-            'student_msg': 'Congratulations! The members of your team have indicated that you were a highly effective team member. Keep up the good work!'
         })
 
-    # Underconfident
     if self_score and peer_avg and (peer_avg - self_score) >= 1.0 and peer_avg > 3:
         flags.append({
             'type': 'info',
             'label': 'Underconfident',
             'instructor_msg': 'Student rated themselves significantly lower than peer ratings',
-            'student_msg': 'Your self-ratings were significantly lower than your teammates\' ratings of your contributions to the team. The members of your team have indicated that you were a highly effective team member. Please try not to minimize the value of your contributions to the team.'
         })
 
     # Manipulator
@@ -116,7 +108,6 @@ def get_flags(student_id, assignment_id):
                 'type': 'error',
                 'label': 'Manipulator',
                 'instructor_msg': 'Student rated themselves high while rating others significantly lower',
-                'student_msg': 'Your self-evaluation indicates you made the primary contribution to the project with little value added by your teammates. The ratings from your teammates did not concur with your assessment. Your instructor may require additional information to clarify what happened in your team.'
             })
 
     # Conflict
@@ -154,11 +145,9 @@ def get_flags(student_id, assignment_id):
                         flags.append({
                             'type': 'warning',
                             'label': 'Conflict',
-                            'instructor_msg': f'Potential conflict between student and evaluator {eval.evaluator_id.username}',
-                            'student_msg': 'Your evaluation indicates significant disagreement with other team members\' assessments. Your instructor may require additional information to clarify what happened in your team.'
+                            'instructor_msg': f'Potential conflict between student and {eval.evaluator_id.username}',
                         })
                         break
-
     return flags
 
 

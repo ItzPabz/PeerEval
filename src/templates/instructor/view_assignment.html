@@ -96,10 +96,10 @@
                         </div>
                         {% endif %}
                         <div class="flex flex-row gap-1">
-                            <button class="btn btn-soft btn-primary flex-1">
+                            <a href="{% url 'student_profile' student.user_id.username %}" class="btn btn-soft btn-primary flex-1">
                                 <i class="fas fa-user"></i>
                                 View Student
-                            </button>
+                            </a>
                             <details class="dropdown dropdown-top dropdown-end flex-1">
                                 <summary class="btn btn-soft btn-secondary w-full">
                                     <i class="fas fa-file-alt"></i>
@@ -234,10 +234,8 @@
 <dialog id="edit_assignment_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Edit Assignment: {{ assignment.name }}</h3>
-        <form method="POST" action="{% url 'edit_assignment' assignment.id %}" onsubmit="setTimes()">
+        <form method="POST" action="{% url 'edit_assignment' assignment.id %}" onsubmit="return combineDateTime(this)">
             {% csrf_token %}
-            <input type="hidden" name="available_time" id="available_time" value="00:01" />
-            <input type="hidden" name="due_time" id="due_time" value="23:59" />
             <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
                 <legend class="fieldset-legend">Assignment Details</legend>
                 
@@ -248,10 +246,16 @@
                     <div>
                         <label class="label">Available Date</label>
                         <input type="date" name="available_date" class="input input-bordered w-full" value="{{ assignment.available_date|date:'Y-m-d' }}" required />
+                        <label class="label">Available Time</label>
+                        <input type="time" name="available_time" class="input input-bordered w-full" value="{{ assignment.available_date|date:'H:i' }}" required />
+                        <input type="hidden" name="available_datetime" />
                     </div>
                     <div>
                         <label class="label">Due Date</label>
                         <input type="date" name="due_date" class="input input-bordered w-full" value="{{ assignment.due_date|date:'Y-m-d' }}" required />
+                        <label class="label">Due Time</label>
+                        <input type="time" name="due_time" class="input input-bordered w-full" value="{{ assignment.due_date|date:'H:i' }}" required />
+                        <input type="hidden" name="due_datetime" />
                     </div>
                 </div>
                 
@@ -305,6 +309,29 @@
 function setTimes() {
     document.getElementById('available_time').value = '00:01';
     document.getElementById('due_time').value = '23:59';
+}
+
+function combineDateTime(form) {
+    try {
+        // Available datetime
+        const availDate = form.available_date.value;
+        const availTime = form.available_time.value;
+        if (availDate && availTime) {
+            form.available_datetime.value = `${availDate}T${availTime}`;
+        }
+
+        // Due datetime
+        const dueDate = form.due_date.value;
+        const dueTime = form.due_time.value;
+        if (dueDate && dueTime) {
+            form.due_datetime.value = `${dueDate}T${dueTime}`;
+        }
+
+        return true;
+    } catch (e) {
+        console.error('Error combining date and time:', e);
+        return false;
+    }
 }
 
 function filterStudents(searchTerm) {

@@ -3,24 +3,23 @@
 
 {% block content %}
 
-    <div class="flex flex-row gap-2 items-center justify-between">
-        <h1 class="text-2xl font-bold mb-4">{{ department.id }}{{course.course_code}} {{ assignment.name }}</h1>
-        <div class="breadcrumbs text-sm">
-            <ul>
-                <li><a href="{% url 'index' %}">Dashboard</a></li>
-                <li><a href="">Current Assignments</a></li>
-            </ul>
-        </div>
+<div class="flex flex-row gap-2 items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">{{ department.id }}{{course.course_code}} {{ assignment.name }}</h1>
+    <div class="text-sm breadcrumbs">
+        <ul>
+            <li><a href="{% url 'index' %}">Dashboard</a></li>
+            <li>{{ assignment.name }}</li>
+        </ul>
     </div>
+</div>
 
     <!-- TODO: ENSURE THAT MERITS ARE REQUIRED!!!!! -->
     <!-- TODO: Make sure that a popup appears if students gives perfect 5/5 to every member! -->
      
-    
     <form method="POST" action="{% url 'submit_evaluation' department.id course.course_code section_number assignment.id %}" id="evaluationForm">
         {% csrf_token %}
         {% for member in group_members %}
-        <div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mb-4">
+        <div class="bg-base-200 p-4 rounded-lg shadow-sm border border-base-300 w-full mb-4">
             <div class="flex items-center justify-between">
                 <div class="w-full">
                     <h2 class="text-xl font-semibold mb-3">{{ member.user_id.first_name }} {{ member.user_id.last_name }} {% if member.user_id.id == user.id %} (You){% endif %}</h2>
@@ -30,188 +29,118 @@
                         <div class="w-1/3 flex flex-col gap-1">
                             {% if member.user_id.id == user.id %}
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">Points</label>
-                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_self }}" data-max-points="{{ assignment.max_points_self }}" data-is-self="true" class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50"/>
+                                    <label class="text-sm font-medium">Points</label>
+                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_self }}" data-max-points="{{ assignment.max_points_self }}" data-is-self="true" class="input input-bordered w-full"/>
                                 </div>
                             {% else %}
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">Points</label>
-                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_partner }}" data-max-points="{{ assignment.max_points_partner }}" data-is-self="false" class="mb-4 w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:bg-zinc-950 dark:text-zinc-50"/>
+                                    <label class="text-sm font-medium">Points</label>
+                                    <input type="number" name="points_{{ forloop.counter }}" id="points_{{ forloop.counter }}" placeholder="0-{{ assignment.max_points_partner }}" data-max-points="{{ assignment.max_points_partner }}" data-is-self="false" class="input input-bordered w-full"/>
                                 </div>
                             {% endif %}
                             <div class="flex flex-row gap-2">
                                 <div class="flex flex-row gap-2">
-                                    <div class="bg-zinc-300 dark:bg-zinc-700 p-2 gap-2 rounded-full flex flex-row">
-                                        <p class="text-sm text-zinc-500 dark:text-zinc-400">Remaining</p>
-                                        <p class="text-sm text-zinc-500 dark:text-zinc-400" id="points-remaining-{{ forloop.counter }}">{{ assignment.max_points_self }} * {{ group_members|length }}</p>
+                                    <div class="badge badge-neutral gap-2">
+                                        <p class="text-sm">Remaining</p>
+                                        <p class="text-sm" id="points-remaining-{{ forloop.counter }}">{{ assignment.max_points_self }} * {{ group_members|length }}</p>
                                     </div>
-                                    <div class="bg-zinc-300 dark:bg-zinc-700 p-2 gap-2 rounded-full flex flex-row">
-                                        <p class="text-sm text-zinc-500 dark:text-zinc-400">Max</p>
-                                        <p class="text-sm text-zinc-500 dark:text-zinc-400">{% if member.user_id.id == user.id %}{{ assignment.max_points_self }}{% else %}{{ assignment.max_points_partner }}{% endif %}</p>
+                                    <div class="badge badge-neutral gap-2">
+                                        <p class="text-sm">Max</p>
+                                        <p class="text-sm">{% if member.user_id.id == user.id %}{{ assignment.max_points_self }}{% else %}{{ assignment.max_points_partner }}{% endif %}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="flex-1 w-full">
-                            <c-input_textarea name="comments_{{ forloop.counter }}" label="Comments" id="comments_{{ forloop.counter }}" placeholder="Comments"></c-input_textarea>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Comments</span>
+                                </label>
+                                <textarea name="comments_{{ forloop.counter }}" id="comments_{{ forloop.counter }}" placeholder="Comments" class="textarea textarea-bordered w-full h-32 mb-4"></textarea>
+                            </div>
                         </div>
                     </div>
                     {% if assignment.enable_merits %}
                     <div class="mb-4 flex flex-row gap-2 items-center">
-                        <h3 class="text-lg font-bold">Merit Scores</h3>
-                        <div class="px-2 py-1 rounded-md flex flex-row items-center gap-2">
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400"> Merit scores help instructors understand team dynamics and won't be shared with the group members.</p>
+                        <h3 class="text-xl font-bold">Merit Scores</h3>
+                        <div class="badge badge-neutral">
+                            <p class="text-sm">Merit scores help instructors understand team dynamics and won't be shared with the group members.</p>
                         </div>
                     </div>
-                    <div class="flex flex-row gap-2 items-center">
-                        <div class="w-full bg-zinc-300 dark:bg-zinc-700 p-2 rounded-md">
-                            <div class="flex flex-row items-center gap-2 justify-between">
-                                <h4 class="font-medium text-zinc-700 dark:text-zinc-200 mb-1">Work Contribution</h4>
-                                <i class="fa-solid fa-circle-info text-zinc-500 text-sm hover:cursor-help" title="Did they complete tasks on time and meet expectations?"></i>
-                            </div>
-                            <div>
-                                <div class="flex flex-row justify-between w-full">
-                                    <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="1" class="hidden" id="workcontribution_1_{{ forloop.counter }}">
-                                    <label for="workcontribution_1_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        1
-                                    </label>
-                                    <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="2" class="hidden" id="workcontribution_2_{{ forloop.counter }}">
-                                    <label for="workcontribution_2_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        2
-                                    </label>
-                                    <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="3" class="hidden" id="workcontribution_3_{{ forloop.counter }}">
-                                    <label for="workcontribution_3_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        3
-                                    </label>
-                                    <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="4" class="hidden" id="workcontribution_4_{{ forloop.counter }}">
-                                    <label for="workcontribution_4_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        4
-                                    </label>
-                                    <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="5" class="hidden" id="workcontribution_5_{{ forloop.counter }}">
-                                    <label for="workcontribution_5_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        5
-                                    </label>
+                    <div class="flex flex-row gap-4">
+                        <div class="flex-1 bg-base-300 p-4 rounded-lg flex flex-col gap-2">
+                            <div class="flex flex-row items-center justify-center gap-2">
+                                <h4 class="font-medium text-base text-lg">Work Contribution</h4>
+                                <div class="tooltip tooltip-right" data-tip="Did they complete tasks on time and meet expectations?">
+                                    <i class="fa-solid fa-circle-info text-base-content/70 text-sm"></i>
                                 </div>
+                            </div>
+                            <div class="rating rating-xl justify-center">
+                                <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="1" class="mask mask-star-2 bg-red-400" aria-label="1 star" />
+                                <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="2" class="mask mask-star-2 bg-yellow-400" aria-label="2 star" />
+                                <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="3" class="mask mask-star-2 bg-lime-400" aria-label="3 star" />
+                                <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="4" class="mask mask-star-2 bg-lime-600" aria-label="4 star" />
+                                <input type="radio" name="score_workcontribution_{{ forloop.counter }}" value="5" class="mask mask-star-2 bg-green-800" aria-label="5 star" />
                             </div>
                         </div>
-                        <div class="w-full bg-zinc-300 dark:bg-zinc-700 p-2 rounded-md">
-                            <div class="flex flex-row items-center gap-2 justify-between">
-                                <h4 class="font-medium text-zinc-700 dark:text-zinc-200 mb-1">Team Interaction</h4>
-                                <i class="fa-solid fa-circle-info text-zinc-500 text-sm hover:cursor-help" title="Did they communicate clearly and support the group?"></i>
-                            </div>
-                            <div>
-                                <div class="flex flex-row justify-between w-full">
-                                    <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="1" class="hidden" id="teaminteraction_1_{{ forloop.counter }}">
-                                    <label for="teaminteraction_1_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        1
-                                    </label>
-                                    <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="2" class="hidden" id="teaminteraction_2_{{ forloop.counter }}">
-                                    <label for="teaminteraction_2_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        2
-                                    </label>
-                                    <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="3" class="hidden" id="teaminteraction_3_{{ forloop.counter }}">
-                                    <label for="teaminteraction_3_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        3
-                                    </label>
-                                    <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="4" class="hidden" id="teaminteraction_4_{{ forloop.counter }}">
-                                    <label for="teaminteraction_4_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        4
-                                    </label>
-                                    <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="5" class="hidden" id="teaminteraction_5_{{ forloop.counter }}">
-                                    <label for="teaminteraction_5_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        5
-                                    </label>
+                        <div class="flex-1 bg-base-300 p-4 rounded-lg flex flex-col gap-2">
+                            <div class="flex flex-row items-center justify-center gap-2">
+                                <h4 class="font-medium text-base text-lg">Team Interaction</h4>
+                                <div class="tooltip tooltip-right" data-tip="Did they communicate clearly and support the group?">
+                                    <i class="fa-solid fa-circle-info text-base-content/70 text-sm"></i>
                                 </div>
+                            </div>
+                            <div class="rating rating-xl justify-center">
+                                <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="1" class="mask mask-star-2 bg-red-400" aria-label="1 star" />
+                                <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="2" class="mask mask-star-2 bg-yellow-400" aria-label="2 star" />
+                                <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="3" class="mask mask-star-2 bg-lime-400" aria-label="3 star" />
+                                <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="4" class="mask mask-star-2 bg-lime-500" aria-label="4 star" />
+                                <input type="radio" name="score_teaminteraction_{{ forloop.counter }}" value="5" class="mask mask-star-2 bg-green-800" aria-label="5 star" />
                             </div>
                         </div>
-                        <div class="w-full bg-zinc-300 dark:bg-zinc-700 p-2 rounded-md">
-                            <div class="flex flex-row items-center gap-2 justify-between">
-                                <h4 class="font-medium text-zinc-700 dark:text-zinc-200 mb-1">Team Awareness</h4>
-                                <i class="fa-solid fa-circle-info text-zinc-500 text-sm hover:cursor-help" title="Did they help the team stay organized and solve problems?"></i>
-                            </div>
-                            <div>
-                                <div class="flex flex-row justify-between w-full">
-                                    <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="1" class="hidden" id="teamawareness_1_{{ forloop.counter }}">
-                                    <label for="teamawareness_1_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        1
-                                    </label>
-                                    <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="2" class="hidden" id="teamawareness_2_{{ forloop.counter }}">
-                                    <label for="teamawareness_2_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        2
-                                    </label>
-                                    <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="3" class="hidden" id="teamawareness_3_{{ forloop.counter }}">
-                                    <label for="teamawareness_3_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        3
-                                    </label>
-                                    <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="4" class="hidden" id="teamawareness_4_{{ forloop.counter }}">
-                                    <label for="teamawareness_4_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        4
-                                    </label>
-                                    <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="5" class="hidden" id="teamawareness_5_{{ forloop.counter }}">
-                                    <label for="teamawareness_5_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        5
-                                    </label>
+                        <div class="flex-1 bg-base-300 p-4 rounded-lg flex flex-col gap-2">
+                            <div class="flex flex-row items-center justify-center gap-2">
+                                <h4 class="font-medium text-base text-lg">Team Awareness</h4>
+                                <div class="tooltip tooltip-right" data-tip="Did they help the team stay organized and solve problems?">
+                                    <i class="fa-solid fa-circle-info text-base-content/70 text-sm"></i>
                                 </div>
+                            </div>
+                            <div class="rating rating-xl justify-center">
+                                <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="1" class="mask mask-star-2 bg-red-400" aria-label="1 star" />
+                                <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="2" class="mask mask-star-2 bg-yellow-400" aria-label="2 star" />
+                                <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="3" class="mask mask-star-2 bg-lime-400" aria-label="3 star" />
+                                <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="4" class="mask mask-star-2 bg-lime-600" aria-label="4 star" />
+                                <input type="radio" name="score_teamawareness_{{ forloop.counter }}" value="5" class="mask mask-star-2 bg-green-800" aria-label="5 star" />
                             </div>
                         </div>
-                        <div class="w-full bg-zinc-300 dark:bg-zinc-700 p-2 rounded-md">
-                            <div class="flex flex-row items-center gap-2 justify-between">
-                                <h4 class="font-medium text-zinc-700 dark:text-zinc-200 mb-1">Quality of Work</h4>
-                                <i class="fa-solid fa-circle-info text-zinc-500 text-sm hover:cursor-help" title="Did they encourage high-quality work?"></i>
-                            </div>
-                            <div>
-                                <div class="flex flex-row justify-between w-full">
-                                    <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="1" class="hidden" id="qualityofwork_1_{{ forloop.counter }}">
-                                    <label for="qualityofwork_1_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        1
-                                    </label>
-                                    <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="2" class="hidden" id="qualityofwork_2_{{ forloop.counter }}">
-                                    <label for="qualityofwork_2_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        2
-                                    </label>
-                                    <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="3" class="hidden" id="qualityofwork_3_{{ forloop.counter }}">
-                                    <label for="qualityofwork_3_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        3
-                                    </label>
-                                    <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="4" class="hidden" id="qualityofwork_4_{{ forloop.counter }}">
-                                    <label for="qualityofwork_4_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        4
-                                    </label>
-                                    <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="5" class="hidden" id="qualityofwork_5_{{ forloop.counter }}">
-                                    <label for="qualityofwork_5_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        5
-                                    </label>
+                        <div class="flex-1 bg-base-300 p-4 rounded-lg flex flex-col gap-2">
+                            <div class="flex flex-row items-center justify-center gap-2">
+                                <h4 class="font-medium text-base text-lg">Quality of Work</h4>
+                                <div class="tooltip tooltip-right" data-tip="Did they encourage high-quality work?">
+                                    <i class="fa-solid fa-circle-info text-base-content/70 text-sm"></i>
                                 </div>
+                            </div>
+                            <div class="rating rating-xl justify-center">
+                                <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="1" class="mask mask-star-2 bg-red-400" aria-label="1 star" />
+                                <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="2" class="mask mask-star-2 bg-yellow-400" aria-label="2 star" />
+                                <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="3" class="mask mask-star-2 bg-lime-400" aria-label="3 star" />
+                                <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="4" class="mask mask-star-2 bg-lime-600" aria-label="4 star" />
+                                <input type="radio" name="score_qualityofwork_{{ forloop.counter }}" value="5" class="mask mask-star-2 bg-green-800" aria-label="5 star" />
                             </div>
                         </div>
-                        <div class="w-full bg-zinc-300 dark:bg-zinc-700 p-2 rounded-md">
-                            <div class="flex flex-row items-center gap-2 justify-between">
-                                <h4 class="font-medium text-zinc-700 dark:text-zinc-200 mb-1">Knowledge & Skills</h4>
-                                <i class="fa-solid fa-circle-info text-zinc-500 text-sm hover:cursor-help" title="Did they have the necessary skills and adapt to challenges?"></i>
-                            </div>
-                            <div>
-                                <div class="flex flex-row justify-between w-full">
-                                    <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="1" class="hidden" id="knowledgeandskills_1_{{ forloop.counter }}">
-                                    <label for="knowledgeandskills_1_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        1
-                                    </label>
-                                    <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="2" class="hidden" id="knowledgeandskills_2_{{ forloop.counter }}">
-                                    <label for="knowledgeandskills_2_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        2
-                                    </label>
-                                    <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="3" class="hidden" id="knowledgeandskills_3_{{ forloop.counter }}">
-                                    <label for="knowledgeandskills_3_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        3
-                                    </label>
-                                    <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="4" class="hidden" id="knowledgeandskills_4_{{ forloop.counter }}">
-                                    <label for="knowledgeandskills_4_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        4
-                                    </label>
-                                    <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="5" class="hidden" id="knowledgeandskills_5_{{ forloop.counter }}">
-                                    <label for="knowledgeandskills_5_{{ forloop.counter }}" class="rating-box rating-box-unchecked">
-                                        5
-                                    </label>
+                        <div class="flex-1 bg-base-300 p-4 rounded-lg flex flex-col gap-2">
+                            <div class="flex flex-row items-center justify-center gap-2">
+                                <h4 class="font-medium text-base text-lg">Knowledge & Skills</h4>
+                                <div class="tooltip tooltip-right" data-tip="Did they have the necessary skills and adapt to challenges?">
+                                    <i class="fa-solid fa-circle-info text-base-content/70 text-sm"></i>
                                 </div>
+                            </div>
+                            <div class="rating rating-xl justify-center">
+                                <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="1" class="mask mask-star-2 bg-red-400" aria-label="1 star" />
+                                <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="2" class="mask mask-star-2 bg-yellow-400" aria-label="2 star" />
+                                <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="3" class="mask mask-star-2 bg-lime-400" aria-label="3 star" />
+                                <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="4" class="mask mask-star-2 bg-lime-600" aria-label="4 star" />
+                                <input type="radio" name="score_knowledgeandskills_{{ forloop.counter }}" value="5" class="mask mask-star-2 bg-green-800" aria-label="5 star" />
                             </div>
                         </div>
                     </div>
@@ -222,7 +151,7 @@
         {% endfor %}
         
         <div class="flex justify-end">
-            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full">
+            <button type="submit" class="btn btn-primary w-full">
                 Submit All Evaluations
             </button>
         </div>
@@ -253,11 +182,11 @@
                         
                         // Add visual feedback for remaining points
                         if (remainingPoints < 0) {
-                            remainingElement.classList.add('text-red-500');
-                            remainingElement.classList.remove('text-zinc-500', 'dark:text-zinc-400');
+                            remainingElement.classList.add('text-error');
+                            remainingElement.classList.remove('text-base-content/70');
                         } else {
-                            remainingElement.classList.remove('text-red-500');
-                            remainingElement.classList.add('text-zinc-500', 'dark:text-zinc-400');
+                            remainingElement.classList.remove('text-error');
+                            remainingElement.classList.add('text-base-content/70');
                         }
                     }
                 });

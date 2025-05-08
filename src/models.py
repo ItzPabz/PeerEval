@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 class Users(AbstractUser):
     is_instructor = models.BooleanField(default=False, help_text='Whether the user is an instructor.')
@@ -174,6 +175,71 @@ class Assignments(models.Model):
 
     def __str__(self):
         return f"{self.section_id.term.name} {self.section_id.course.department.id}{self.section_id.course.course_code}-{self.section_id.section_number} {self.name}"
+        
+    @property
+    def is_active(self):
+        """Check if the assignment is currently active (between available_date and due_date)"""
+        now = timezone.now()
+        return self.available_date <= now and self.due_date >= now
+        
+    def get_evaluations_total_for_user(self, user_id, exclude_evaluation_id=None):
+        """
+        Calculate the total points assigned by a user for all evaluations in this assignment.
+        
+        Args:
+            user_id: The user ID of the evaluator
+            exclude_evaluation_id: Optional ID of an evaluation to exclude from the total
+            
+        Returns:
+            int: The total points assigned by the user
+        """
+        from src.models import Evaluations
+        
+        evaluations = Evaluations.objects.filter(
+            assignment_id=self,
+            evaluator_id=user_id
+        )
+        
+        if exclude_evaluation_id:
+            evaluations = evaluations.exclude(id=exclude_evaluation_id)
+            
+        return evaluations.aggregate(total=models.Sum('points'))['total'] or 0
+        
+    def get_max_points_for_group(self, group_size):
+        """
+        Calculate the maximum total points that can be assigned by a user for a group.
+        
+        Args:
+            group_size: The number of members in the group
+            
+        Returns:
+            int: The maximum total points allowed
+        """
+        return self.max_points_self * group_size
+        
+    def get_group_size_for_user(self, user_id):
+        """
+        Get the size of the group that a user belongs to for this assignment's section.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            int: The number of members in the user's group
+        """
+        from src.models import Enrollments
+        
+        try:
+            enrollment = Enrollments.objects.get(
+                user_id=user_id,
+                section_id=self.section_id
+            )
+            
+            if enrollment.group:
+                return Enrollments.objects.filter(group=enrollment.group).count()
+            return 0
+        except Enrollments.DoesNotExist:
+            return 0
 
 class Evaluations(models.Model):
     id = models.AutoField(primary_key=True)
@@ -203,3 +269,6 @@ class MeritScores(models.Model):
     class Meta:
         verbose_name = 'Merit Score'
         verbose_name_plural = 'Merit Scores'
+
+    def __str__(self):
+        return f"{self.evaluation_id.evaluator_id.first_name} {self.evaluation_id.evaluator_id.last_name} scored {self.score_workcontribution} for {self.evaluation_id.evaluatee_id.first_name} {self.evaluation_id.evaluatee_id.last_name} in {self.evaluation_id.assignment_id.name}"

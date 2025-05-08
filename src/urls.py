@@ -17,6 +17,8 @@ urlpatterns = [
     path('manage/<int:section_id>/manage_groups/', views.section_manage_groups, name='section_manage_groups'),
     path('manage/<int:section_id>/export_grades/', views.export_grades, name='export_grades'),
     path('view/student/<str:username>/', views.student_profile, name='student_profile'),
+    path('student/<str:username>/edit/', views.edit_student, name='edit_student'),
+    path('student/<str:username>/delete/', views.delete_student, name='delete_student'),
     path('view/assignment/<int:assignment_id>/', views.view_assignment, name='view_assignment'),
     path('add/course/', views.add_course, name='add_course'),
     path('add/instructor/', views.add_instructor, name='add_instructor'),
@@ -25,7 +27,7 @@ urlpatterns = [
     path('add/student/', views.add_student, name='add_students'),
     path('add/term/', views.add_term, name='add_term'),
     path('add/department/', views.add_department, name='add_department'),
-    path('view/evaluation/<int:eval_id>', views.evaluation_view, name='evaluation_view'),
+    path('view/evaluation/<int:eval_id>/', views.evaluation_view, name='evaluation_view'),
     path('section/<int:section_id>/import/', views.import_wizard, name='import_wizard'),
     path('section/<int:section_id>/import/confirm/', views.import_confirm, name='import_confirm'),
     path('section/<int:section_id>/export/', views.export_grades, name='export_grades'),
@@ -37,5 +39,8 @@ urlpatterns = [
     path('course/<int:course_id>/delete/', views.delete_course, name='delete_course'),
     path('section/<int:section_id>/manage-instructors/', views.section_manage_instructors, name='section_manage_instructors'),
     path('section/<int:section_id>/remove-instructors/', views.section_remove_instructors, name='section_remove_instructors'),
+    path('view/evaluation/<int:evaluation_id>/', views.evaluation_view, name='evaluation_view'),
+    path('edit/evaluation/<int:eval_id>/', views.edit_evaluation, name='edit_evaluation'),
+    path('delete/evaluation/<int:eval_id>/', views.delete_evaluation, name='delete_evaluation'),
 ]
 

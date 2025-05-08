@@ -2,117 +2,174 @@
 {% block title %}Student Dashboard - {{ INST_SHORT_NAME }} PeerEval{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Student Dashboard</h1>
-{% if assignments %}
-<div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full">
-    <h2 class="text-xl font-semibold mb-3">Remaining Evaluations</h2>
-    <div class="grid grid-cols-3 gap-4">
-        {% for assignment in assignments %}
-        <a href="{% url 'evaluation' assignment.section_id.course.department.id assignment.section_id.course.course_code assignment.section_id.section_number assignment.id %}"
-            class="block">
-            <div
-                class="bg-zinc-300 dark:bg-zinc-700 rounded border border-zinc-100 dark:border-zinc-600 p-3 bg-zinc-400 dark:bg-zinc-600 {% if assignment.is_active %}hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors{% endif %}">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center">
-                            <h3 class="text-lg font-semibold">{{ assignment.section_id.course.department.id }}{{
-                                assignment.section_id.course.course_code }} {{ assignment.name }}</h3>
-                            {% if assignment.is_active %}
-                            <div class="inline-grid *:[grid-area:1/1] ml-2">
-                                <div class="status status-success animate-ping"></div>
-                                <div class="status status-success"></div>
+<div class="flex flex-col gap-4">
+    <div class="flex flex-row gap-2 items-center justify-between">
+        <h1 class="text-2xl font-bold">Student Dashboard</h1>
+        <div class="text-sm breadcrumbs">
+            <ul>
+                <li>Dashboard</li>
+            </ul>
+        </div>
+    </div>
+
+    {% if assignments %}
+    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
+        <div class="divider mb-8"><h2 class="text-xl font-bold">Active Assignments</h2></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for assignment in assignments %}
+                {% if assignment.assignment_active %}
+                <a href="{% url 'evaluation' assignment.section_id.course.department.id assignment.section_id.course.course_code assignment.section_id.section_number assignment.id %}" 
+                    class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200">
+                    <div class="card-body p-4 pt-3 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="flex flex-col gap-2 relative z-10">
+                            <div class="flex items-center justify-between">
+                                <h3 class="card-title text-lg font-bold truncate">
+                                    {{ assignment.section_id.course.department.id }}{{ assignment.section_id.course.course_code }} {{ assignment.name }}
+                                </h3>
+                                <div class="inline-grid *:[grid-area:1/1]">
+                                    <div class="status status-success status-lg animate-ping"></div>
+                                    <div class="status status-success status-lg"></div>
+                                </div>
                             </div>
-                            {% else %}
-                            <span class="status ml-2"></span>
-                            {% endif %}
-                        </div>
-                        {% if assignment.is_active %}
-                        <p class="text-sm text-zinc-600 dark:text-zinc-300">Due {{ assignment.due_date }} ({{
-                            assignment.due_date|timeuntil }} remaining) </p>
-                        {% else %}
-                        <p class="text-sm text-zinc-600 dark:text-zinc-300">Available {{ assignment.available_date }}
-                            (Opens in {{
-                            assignment.available_date|timeuntil }}) </p>
-                        {% endif %}
-                    </div>
-                    {% if not assignment.is_active %}
-                    <div class="flex items-center">
-                        <div
-                            class="bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-100 dark:border-zinc-700 p-3 w-10 h-10 flex items-center justify-center cursor-default">
-                            <i class="fas fa-lock"></i>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </a>
-        {% endfor %}
-    </div>
-</div>
-{% else %}
-<div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full border-dashed">
-    <h2 class="text-md font-semibold text-center">You have no remaining evaluations.</h2>
-</div>
-{% endif %}
-
-<div class="bg-zinc-200 dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full mt-4">
-    <h2 class="text-lg font-bold">Past Evaluations</h2>
-    <div class="flex flex-row gap-2 mt-2">
-        <input type="text" id="past-evaluations-search" class="w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" placeholder="Search by student name, course, or assignment" oninput="filterPastEvaluations(this.value)" />
-    </div>
-
-    {% if past_evaluations %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mt-4" id="past-evaluations-grid">
-            {% for evaluation in past_evaluations %}
-                <a href="{% url 'evaluation_view' evaluation.id %}" class="past-evaluation-card flex flex-row items-center gap-4 bg-zinc-100 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
-                    <div class="flex flex-col min-w-0 flex-1">
-                        <div class="flex flex-row items-center gap-2">
-                            <span class="font-medium truncate">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</span>
-                        </div>
-                        <div class="flex flex-row items-center gap-2 text-sm">
-                            <span class="text-zinc-600 dark:text-zinc-400">{{ evaluation.assignment_id.section_id.term.name }} {{ evaluation.assignment_id.section_id.course.department.id }}{{ evaluation.assignment_id.section_id.course.course_code }}-{{ evaluation.assignment_id.section_id.section_number }}</span>
-                            <span class="text-zinc-600 dark:text-zinc-400">•</span>
-                            <span class="text-zinc-600 dark:text-zinc-400 truncate">{{ evaluation.assignment_id.name }}</span>
+                            <div class="flex flex-col gap-1 text-sm text-base-content/70">
+                                <div class="flex items-center justify-between">
+                                    <span>Due: {{ assignment.due_date|date:"M j, Y" }} at {{ assignment.due_date|date:"g:i A" }}</span>
+                                    <span class="badge badge-warning">{{ assignment.due_date|timeuntil }} remaining</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </a>
+                {% else %}
+                <div class="col-span-full flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                    <p class="text-base-content/50 text-lg">No upcoming assignments found</p>
+                </div>
+                {% endif %}
+            {% empty %}
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                <p class="text-base-content/50 text-lg">No active assignments found</p>
+            </div>
             {% endfor %}
         </div>
-
-                <div class="flex justify-center items-center gap-4 mt-4">
-            <button id="prevPastEvalPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
-            <span class="text-sm"><span id="currentPastEvalPage">1</span> / <span id="totalPastEvalPages">1</span></span>
-            <button id="nextPastEvalPage" class="w-24 px-4 py-2 bg-zinc-300 dark:bg-zinc-700 rounded-lg hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+        <div class="divider mt-16 mb-8"><h2 class="text-xl font-bold">Upcoming Assignments</h2></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for assignment in assignments %}
+                {% if not assignment.assignment_active %}
+                <div class="card bg-base-100 shadow-sm border border-base-300 opacity-75">
+                    <div class="card-body p-4 pt-3">
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center justify-between">
+                                <h3 class="card-title text-lg font-bold truncate">
+                                    {{ assignment.section_id.course.department.id }}{{ assignment.section_id.course.course_code }} {{ assignment.name }}
+                                </h3>
+                                <div class="badge badge-neutral">Upcoming</div>
+                            </div>
+                            <div class="flex flex-col gap-1 text-sm text-base-content/70">
+                                <div class="flex items-center justify-between">
+                                    <span>Available: {{ assignment.available_date|date:"M j, Y" }} at {{ assignment.available_date|date:"g:i A" }}</span>
+                                    <span class="badge badge-ghost">Opens in {{ assignment.available_date|timeuntil }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-span-full flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                    <p class="text-base-content/50 text-lg">No upcoming assignments found</p>
+                </div>
+                {% endif %}
+            {% endfor %}
         </div>
+    </div>
     {% else %}
-        <div class="flex flex-col items-center justify-center p-8 text-center">
-            <span class="text-zinc-600 dark:text-zinc-400">No past evaluations found.</span>
-        </div>
+    <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+        <p class="text-base-content/50 text-lg">No assignments found</p>
+    </div>
     {% endif %}
+
+    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-lg shadow-sm border border-base-300">
+        <div class="flex flex-col gap-2 justify-between items-center">
+            <div class="divider mb-2"><h2 class="text-xl font-bold">Past Evaluations</h2></div>
+            <div class="w-full">
+                <div class="flex flex-row gap-2 flex-1">
+                    <label class="input input-bordered flex items-center gap-2 w-full">
+                        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+                        <input type="search" id="past-evaluations-search" class="w-full" placeholder="Search by name, course, or assignment" />
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        {% if past_evaluations %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="past-evaluations-grid">
+                {% for evaluation in past_evaluations %}
+                    <a href="{% url 'evaluation_view' evaluation.id %}" 
+                        class="past-evaluation-card card bg-base-100 shadow-sm border border-base-300 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-base-200"
+                        data-student="{{ evaluation.evaluatee_id.first_name|lower }} {{ evaluation.evaluatee_id.last_name|lower }}"
+                        data-course="{{ evaluation.assignment_id.section_id.course.department.id|lower }}{{ evaluation.assignment_id.section_id.course.course_code|lower }}"
+                        data-section="{{ evaluation.assignment_id.section_id.section_number }}"
+                        data-assignment="{{ evaluation.assignment_id.name|lower }}"
+                        data-term="{{ evaluation.assignment_id.section_id.term.name|lower }}">
+                        <div class="card-body p-4 pt-3">
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="card-title text-lg font-bold truncate">{{ evaluation.evaluatee_id.first_name }} {{ evaluation.evaluatee_id.last_name }}</h3>
+                                    {% if evaluation.assignment_id.assignment_active %}
+                                    <div class="badge badge-success">Still Open</div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center justify-between text-sm text-base-content/70">
+                                    <span>{{ evaluation.assignment_id.section_id.term.name }} {{ evaluation.assignment_id.section_id.course.department.id }}{{ evaluation.assignment_id.section_id.course.course_code }}-{{ evaluation.assignment_id.section_id.section_number }}</span>
+                                    <span>{{ evaluation.assignment_id.name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="flex justify-center items-center gap-4 mt-4">
+                <div class="join">
+                    <button id="prevPastEvalPage" class="join-item btn btn-neutral" disabled>«</button>
+                    <button class="join-item btn btn-neutral">
+                        <span id="currentPastEvalPage">1</span> / <span id="totalPastEvalPages">1</span>
+                    </button>
+                    <button id="nextPastEvalPage" class="join-item btn btn-neutral" disabled>»</button>
+                </div>
+            </div>
+        {% else %}
+            <div class="flex items-center justify-center p-8 border-2 border-dashed border-base-300 rounded-lg">
+                <p class="text-base-content/50 text-lg">No past evaluations found</p>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
 <script>
     let currentPastEvalPage = 1;
-    const pastEvalItemsPerPage = 9; // Number of evaluation cards per page
+    const pastEvalItemsPerPage = 9;
     
     function filterPastEvaluations(query) {
         const evaluations = document.querySelectorAll('.past-evaluation-card');
         const lowercaseQuery = query.toLowerCase().trim();
         
         evaluations.forEach(evaluation => {
-            const studentName = evaluation.querySelector('.font-medium').textContent.toLowerCase();
-            const courseInfo = evaluation.querySelectorAll('.text-zinc-600')[0].textContent.toLowerCase();
-            const assignmentName = evaluation.querySelectorAll('.text-zinc-600')[2].textContent.toLowerCase();
+            const searchableText = [
+                evaluation.dataset.student,
+                evaluation.dataset.course,
+                evaluation.dataset.section,
+                evaluation.dataset.assignment,
+                evaluation.dataset.term
+            ].join(' ');
             
-            const isVisible = studentName.includes(lowercaseQuery) || 
-                            courseInfo.includes(lowercaseQuery) ||
-                            assignmentName.includes(lowercaseQuery);
-            
-            if (isVisible) {
-                evaluation.dataset.filtered = 'true';
-            } else {
-                evaluation.dataset.filtered = 'false';
-            }
+            const isVisible = searchableText.includes(lowercaseQuery);
+            evaluation.style.display = isVisible ? 'block' : 'none';
         });
 
         currentPastEvalPage = 1;
@@ -120,17 +177,11 @@
     }
 
     function showPastEvalPage(page) {
-        const filteredEvaluations = Array.from(document.querySelectorAll('.past-evaluation-card[data-filtered="true"]'));
-        const pageCount = Math.ceil(filteredEvaluations.length / pastEvalItemsPerPage);
+        const visibleEvaluations = Array.from(document.querySelectorAll('.past-evaluation-card')).filter(e => e.style.display !== 'none');
+        const pageCount = Math.ceil(visibleEvaluations.length / pastEvalItemsPerPage);
         
-        document.querySelectorAll('.past-evaluation-card').forEach(evaluation => {
-            evaluation.style.display = 'none';
-        });
-
-        filteredEvaluations.forEach((evaluation, index) => {
-            if (index >= (page - 1) * pastEvalItemsPerPage && index < page * pastEvalItemsPerPage) {
-                evaluation.style.display = 'flex';
-            }
+        visibleEvaluations.forEach((evaluation, index) => {
+            evaluation.style.display = (index >= (page - 1) * pastEvalItemsPerPage && index < page * pastEvalItemsPerPage) ? 'block' : 'none';
         });
         
         document.getElementById('currentPastEvalPage').textContent = page;
@@ -140,8 +191,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.past-evaluation-card').forEach(evaluation => {
-            evaluation.dataset.filtered = 'true';
+        const searchInput = document.getElementById('past-evaluations-search');
+        searchInput.addEventListener('input', function() {
+            filterPastEvaluations(this.value);
         });
 
         document.getElementById('prevPastEvalPage').addEventListener('click', () => {
@@ -152,8 +204,8 @@
         });
 
         document.getElementById('nextPastEvalPage').addEventListener('click', () => {
-            const filteredCount = document.querySelectorAll('.past-evaluation-card[data-filtered="true"]').length;
-            const pageCount = Math.ceil(filteredCount / pastEvalItemsPerPage);
+            const visibleCount = document.querySelectorAll('.past-evaluation-card[style="display: block"]').length;
+            const pageCount = Math.ceil(visibleCount / pastEvalItemsPerPage);
             if (currentPastEvalPage < pageCount) {
                 currentPastEvalPage++;
                 showPastEvalPage(currentPastEvalPage);

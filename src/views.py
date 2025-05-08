@@ -32,6 +32,10 @@ def rate_limit_login(username):
 @login_required
 def index(request):
     current_user = request.user
+    search_query = request.GET.get('search', '')
+    page_number = request.GET.get('page', 1)
+    now = timezone.now()
+    
     if current_user.is_instructor:
         active_sections = Sections.get_active_sections_for_instructor(current_user).annotate(
             student_count=models.Count('enrollments', distinct=True),
@@ -58,9 +62,57 @@ def index(request):
             assignment_id__section_id__term__end_date__gte=timezone.now().date()
         ).select_related('assignment_id', 'assignment_id__section_id', 'assignment_id__section_id__course', 'assignment_id__section_id__term')
         past_evaluations = Evaluations.objects.filter(
-            assignment_id__section_id__in=past_sections,
-            assignment_id__section_id__term__end_date__lt=timezone.now().date()
-        ).select_related('assignment_id', 'assignment_id__section_id', 'assignment_id__section_id__course', 'assignment_id__section_id__term')
+            evaluator_id=current_user
+        ).select_related(
+            'assignment_id',
+            'assignment_id__section_id',
+            'assignment_id__section_id__course',
+            'assignment_id__section_id__course__department',
+            'assignment_id__section_id__term',
+            'evaluatee_id'
+        ).order_by('-submission_date')
+        
+        if search_query:
+            past_evaluations = past_evaluations.filter(
+                Q(assignment_id__name__icontains=search_query) |
+                Q(evaluatee_id__first_name__icontains=search_query) |
+                Q(evaluatee_id__last_name__icontains=search_query) |
+                Q(assignment_id__section_id__course__department__id__icontains=search_query) |
+                Q(assignment_id__section_id__course__course_code__icontains=search_query)
+            )
+
+        paginator = Paginator(past_evaluations, 10)
+        try:
+            past_evaluations_page = paginator.page(page_number)
+        except PageNotAnInteger:
+            past_evaluations_page = paginator.page(1)
+        except EmptyPage:
+            past_evaluations_page = paginator.page(paginator.num_pages)
+        
+        # Add assignment_active attribute to assignments in past_evaluations
+        for evaluation in past_evaluations_page:
+            evaluation.assignment_id.assignment_active = (
+                evaluation.assignment_id.available_date <= now and 
+                evaluation.assignment_id.due_date >= now
+            )
+
+        def calculate_alert_level(assignment):
+            time_until_due = (assignment.due_date - now).total_seconds()
+            
+            if time_until_due <= 3600:
+                return 'red'
+            elif time_until_due <= 86400:
+                return 'yellow'
+            elif assignment.available_date <= now and assignment.due_date >= now:
+                return 'green'
+            else:
+                return 'gray'   
+                
+        assignments = active_assignments
+        for assignment in assignments:
+            # Use assignment_active attribute instead of trying to set is_active property
+            assignment.assignment_active = assignment.available_date <= now and assignment.due_date >= now
+            assignment.alert_level = calculate_alert_level(assignment)
 
         # Calculate statistics
         total_students = active_students.count()
@@ -254,6 +306,13 @@ def index(request):
             past_evaluations_page = paginator.page(1)
         except EmptyPage:
             past_evaluations_page = paginator.page(paginator.num_pages)
+        
+        # Add assignment_active attribute to assignments in past_evaluations
+        for evaluation in past_evaluations_page:
+            evaluation.assignment_id.assignment_active = (
+                evaluation.assignment_id.available_date <= now and 
+                evaluation.assignment_id.due_date >= now
+            )
 
         def calculate_alert_level(assignment):
             time_until_due = (assignment.due_date - now).total_seconds()
@@ -266,8 +325,10 @@ def index(request):
                 return 'green'
             else:
                 return 'gray'   
+                
         for assignment in assignments:
-            assignment.is_active = assignment.available_date <= now and assignment.due_date >= now
+            # Use assignment_active attribute instead of trying to set is_active property
+            assignment.assignment_active = assignment.available_date <= now and assignment.due_date >= now
             assignment.alert_level = calculate_alert_level(assignment)
 
         context = {
@@ -421,7 +482,7 @@ def submit_evaluation(request, department, course, section_number, assignment):
                         **merit_scores
                     )
                     
-        messages.info(request, 'All evaluations submitted successfully!')
+        messages.success(request, 'All evaluations submitted successfully!')
     except Exception as e:
         messages.error(request, f'Error submitting evaluations: {str(e)}')
         
@@ -473,7 +534,10 @@ def section_dashboard(request, section_id):
         ).count()
         available_date = timezone.make_aware(assignment.available_date) if timezone.is_naive(assignment.available_date) else assignment.available_date
         due_date = timezone.make_aware(assignment.due_date) if timezone.is_naive(assignment.due_date) else assignment.due_date
-        assignment.is_active = available_date <= now and due_date >= now
+        # Calculate is_active status directly instead of assignment to property
+        is_assignment_active = available_date <= now and due_date >= now
+        # Use is_assignment_active in template via a custom attribute
+        assignment.assignment_active = is_assignment_active
         assignment.alert_level = calculate_alert_level(assignment)
         
     total_evaluations = Evaluations.objects.filter(
@@ -481,7 +545,7 @@ def section_dashboard(request, section_id):
     ).count()
     
     # Calculate stats descriptions
-    active_assignments = sum(1 for a in assignments if a.is_active)
+    active_assignments = sum(1 for a in assignments if hasattr(a, 'assignment_active') and a.assignment_active)
     upcoming_assignments = sum(1 for a in assignments if a.available_date > now)
     past_assignments = sum(1 for a in assignments if a.due_date < now)
     
@@ -694,6 +758,11 @@ def student_profile(request, username):
             section_id__term__end_date__lt=timezone.now().date()
         )
         
+        instructor_sections = Sections.objects.filter(
+            sectioninstructors__user_id=current_user
+        )
+        
+        # Get all assignments for the student's sections
         assignments = Assignments.objects.filter(
             section_id__in=enrollments.values('section_id')
         ).select_related(
@@ -703,10 +772,7 @@ def student_profile(request, username):
             'section_id__term'
         ).order_by('-due_date')
         
-        instructor_sections = Sections.objects.filter(
-            sectioninstructors__user_id=current_user
-        )
-        
+        # Get evaluations given by the student
         evaluations = Evaluations.objects.filter(
             evaluator_id=student,
             assignment_id__section_id__in=instructor_sections
@@ -719,6 +785,7 @@ def student_profile(request, username):
             'evaluatee_id'
         ).order_by('-submission_date')
         
+        # Get evaluations received by the student
         received_evaluations = Evaluations.objects.filter(
             evaluatee_id=student,
             assignment_id__section_id__in=instructor_sections
@@ -731,29 +798,139 @@ def student_profile(request, username):
             'evaluator_id'
         ).order_by('-submission_date')
 
-        merit_scores = MeritScores.objects.filter(
+        # Get merit scores for all evaluations
+        merit_scores_queryset = MeritScores.objects.filter(
             evaluation_id__in=received_evaluations
-        ).select_related('evaluation_id')
+        )
 
-        work_contribution_avg = merit_scores.aggregate(avg=models.Avg('score_workcontribution'))['avg'] or 0
-        team_interaction_avg = merit_scores.aggregate(avg=models.Avg('score_teaminteraction'))['avg'] or 0
-        team_awareness_avg = merit_scores.aggregate(avg=models.Avg('score_teamawareness'))['avg'] or 0
-        quality_of_work_avg = merit_scores.aggregate(avg=models.Avg('score_qualityofwork'))['avg'] or 0
-        knowledge_and_skills_avg = merit_scores.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg'] or 0
-        
+        # Group evaluations by assignment and process merit scores
+        assignments_with_evaluations = []
+        for assignment in assignments:
+            assignment_evaluations = received_evaluations.filter(assignment_id=assignment)
+            if assignment_evaluations.exists():
+                processed_evaluations = []
+                for evaluation in assignment_evaluations:
+                    merit_data = MeritScores.objects.filter(evaluation_id=evaluation)
+                    if merit_data.exists():
+                        merit = merit_data.first()
+                        merit_scores = [
+                            {
+                                'category': 'Work Contribution',
+                                'score': round(merit.score_workcontribution, 1) if merit.score_workcontribution else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Team Interaction',
+                                'score': round(merit.score_teaminteraction, 1) if merit.score_teaminteraction else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Team Awareness',
+                                'score': round(merit.score_teamawareness, 1) if merit.score_teamawareness else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Quality of Work',
+                                'score': round(merit.score_qualityofwork, 1) if merit.score_qualityofwork else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Knowledge & Skills',
+                                'score': round(merit.score_knowledgeandskills, 1) if merit.score_knowledgeandskills else 'N/A',
+                                'color': 'primary'
+                            }
+                        ]
+                    else:
+                        merit_scores = None
+                    
+                    processed_evaluations.append({
+                        'evaluation': evaluation,
+                        'merit_scores': merit_scores
+                    })
+
+                # Get flags using the utils function
+                flags = get_flags(student.id, assignment.id)
+                
+                assignments_with_evaluations.append({
+                    'assignment': assignment,
+                    'evaluations': processed_evaluations,
+                    'flags': flags
+                })
+
+        # Group evaluations given by assignment and process merit scores
+        assignments_with_given_evaluations = []
+        for assignment in assignments:
+            assignment_evaluations = evaluations.filter(assignment_id=assignment)
+            if assignment_evaluations.exists():
+                processed_evaluations = []
+                for evaluation in assignment_evaluations:
+                    merit_data = MeritScores.objects.filter(evaluation_id=evaluation)
+                    if merit_data.exists():
+                        merit = merit_data.first()
+                        merit_scores = [
+                            {
+                                'category': 'Work Contribution',
+                                'score': round(merit.score_workcontribution, 1) if merit.score_workcontribution else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Team Interaction',
+                                'score': round(merit.score_teaminteraction, 1) if merit.score_teaminteraction else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Team Awareness',
+                                'score': round(merit.score_teamawareness, 1) if merit.score_teamawareness else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Quality of Work',
+                                'score': round(merit.score_qualityofwork, 1) if merit.score_qualityofwork else 'N/A',
+                                'color': 'primary'
+                            },
+                            {
+                                'category': 'Knowledge & Skills',
+                                'score': round(merit.score_knowledgeandskills, 1) if merit.score_knowledgeandskills else 'N/A',
+                                'color': 'primary'
+                            }
+                        ]
+                    else:
+                        merit_scores = None
+                    
+                    processed_evaluations.append({
+                        'evaluation': evaluation,
+                        'merit_scores': merit_scores
+                    })
+
+                flags = get_flags(student.id, assignment.id)
+                
+                assignments_with_given_evaluations.append({
+                    'assignment': assignment,
+                    'evaluations': processed_evaluations,
+                    'flags': flags
+                })
+
+        work_contribution_avg = merit_scores_queryset.aggregate(avg=models.Avg('score_workcontribution'))['avg'] or 0
+        team_interaction_avg = merit_scores_queryset.aggregate(avg=models.Avg('score_teaminteraction'))['avg'] or 0
+        team_awareness_avg = merit_scores_queryset.aggregate(avg=models.Avg('score_teamawareness'))['avg'] or 0
+        quality_of_work_avg = merit_scores_queryset.aggregate(avg=models.Avg('score_qualityofwork'))['avg'] or 0
+        knowledge_and_skills_avg = merit_scores_queryset.aggregate(avg=models.Avg('score_knowledgeandskills'))['avg'] or 0
+
+        enrolled_since = Enrollments.objects.filter(user_id=student).select_related('section_id__term').order_by('enrollment_date').first()
+
         context = {
             'student': student,
             'active_enrollments': active_enrollments,
             'past_enrollments': past_enrollments,
-            'assignments': assignments,
-            'evaluations': evaluations,
-            'received_evaluations': received_evaluations,
+            'assignments': assignments_with_evaluations,
+            'given_assignments': assignments_with_given_evaluations,
             'now': timezone.now(),
             'work_contribution_avg': round(work_contribution_avg, 1),
             'team_interaction_avg': round(team_interaction_avg, 1),
             'team_awareness_avg': round(team_awareness_avg, 1),
             'quality_of_work_avg': round(quality_of_work_avg, 1),
             'knowledge_and_skills_avg': round(knowledge_and_skills_avg, 1),
+            'enrolled_since': enrolled_since,
         }
         
         return render(request, 'instructor/student_profile.html', context)
@@ -794,16 +971,25 @@ def add_instructor(request):
     if request.method == 'POST':
         form = InstructorForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, f'Instructor {form.cleaned_data["first_name"]} {form.cleaned_data["last_name"]} added successfully!')
-            return redirect('index')
-    else:
-        form = InstructorForm()
-        
-    context = {
-        'form': form
-    }
-    return render(request, 'instructor/add_forms/instructor.html', context)
+            try:
+                instructor = form.save()
+                messages.success(request, f'Instructor {instructor.first_name} {instructor.last_name} added successfully!')
+            except Exception as e:
+                if 'username' in str(e).lower():
+                    messages.error(request, 'An instructor with this username already exists.')
+                else:
+                    messages.error(request, f'Error adding instructor: {str(e)}')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    # Skip __all__ errors related to username
+                    if field == '__all__' and 'username' in error.lower():
+                        continue
+                    if field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        messages.error(request, f"{field.title()}: {error}")
+    return redirect('index')
 
 @login_required
 def add_section(request):
@@ -1477,9 +1663,9 @@ def export_grades(request, section_id):
 def evaluation_view(request, eval_id):
     evaluation = get_object_or_404(Evaluations, id=eval_id)
     
-    is_instructor = Sections.objects.filter(
-        sectioninstructors__user_id=request.user,
-        id=evaluation.assignment_id.section_id.id
+    is_instructor = SectionInstructors.objects.filter(
+        section_id=evaluation.assignment_id.section_id,
+        user_id=request.user
     ).exists()
     
     is_evaluator = evaluation.evaluator_id == request.user
@@ -1492,11 +1678,37 @@ def evaluation_view(request, eval_id):
     except MeritScores.DoesNotExist:
         merit_scores = None
     
+    # Calculate total points from other evaluations by the same user for this assignment
+    other_evaluations_total = evaluation.assignment_id.get_evaluations_total_for_user(
+        evaluation.evaluator_id.id,
+        exclude_evaluation_id=evaluation.id
+    )
+    
+    # Get the group size for the evaluator
+    group_size = evaluation.assignment_id.get_group_size_for_user(evaluation.evaluator_id.id)
+    
+    # Calculate max points for the group
+    max_points_for_group = evaluation.assignment_id.get_max_points_for_group(group_size)
+    
+    # Get remaining points available
+    remaining_points = max_points_for_group - other_evaluations_total - evaluation.points
+    
+    # Add assignment_active attribute to the assignment object
+    now = timezone.now()
+    evaluation.assignment_id.assignment_active = (
+        evaluation.assignment_id.available_date <= now and 
+        evaluation.assignment_id.due_date >= now
+    )
+    
     context = {
         'evaluation': evaluation,
         'merit_scores': merit_scores,
         'is_instructor': is_instructor,
-        'is_evaluator': is_evaluator
+        'is_evaluator': is_evaluator,
+        'other_evaluations_total': other_evaluations_total,
+        'group_size': group_size,
+        'max_points_for_group': max_points_for_group,
+        'remaining_points': remaining_points
     }
     
     return render(request, 'instructor/evaluation_view.html', context)
@@ -2060,17 +2272,14 @@ def delete_course(request, course_id):
     
     if request.method == 'POST':
         try:
-
             sections_count = Sections.objects.filter(course=course).count()
             assignments_count = Assignments.objects.filter(section_id__course=course).count()
             evaluations_count = Evaluations.objects.filter(assignment_id__section_id__course=course).count()
             enrollments_count = Enrollments.objects.filter(section_id__course=course).count()
             groups_count = Groups.objects.filter(section_id__course=course).count()
             
-
             course.delete()
             
-
             messages.success(request, f'Course deleted successfully.')
             messages.info(request, f'Deleted {sections_count} sections')
             messages.info(request, f'Deleted {assignments_count} assignments')
@@ -2079,31 +2288,6 @@ def delete_course(request, course_id):
             messages.info(request, f'Deleted {groups_count} groups')
         except Exception as e:
             messages.error(request, f'Error deleting course: {str(e)}')
-    else:
-
-        sections_count = Sections.objects.filter(course=course).count()
-        assignments_count = Assignments.objects.filter(section_id__course=course).count()
-        evaluations_count = Evaluations.objects.filter(assignment_id__section_id__course=course).count()
-        enrollments_count = Enrollments.objects.filter(section_id__course=course).count()
-        groups_count = Groups.objects.filter(section_id__course=course).count()
-        
-        confirmation_message = (
-            f'Are you sure you want to delete this course?\n\n'
-            f'This will delete:\n'
-            f'- {sections_count} sections\n'
-            f'- {assignments_count} assignments\n'
-            f'- {evaluations_count} evaluations\n'
-            f'- {enrollments_count} enrollments\n'
-            f'- {groups_count} groups\n\n'
-            f'This action cannot be undone.'
-        )
-        
-        context = {
-            'course': course,
-            'confirmation_message': confirmation_message
-        }
-        
-        return render(request, 'instructor/confirm_delete_course.html', context)
     
     return redirect('index')
 
@@ -2166,4 +2350,203 @@ def section_remove_instructors(request, section_id):
             messages.success(request, 'Instructors removed successfully.')
     
     return redirect('section_manage_instructors', section_id=section.id)
+
+@login_required
+def edit_student(request, username):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to edit students.')
+        return redirect('index')
+        
+    try:
+        student = Users.objects.get(username=username)
+        
+        if request.method == 'POST':
+            first_name = request.POST.get('first_name')
+            last_name = request.POST.get('last_name')
+            
+            student.first_name = first_name
+            student.last_name = last_name
+            student.save()
+            
+            messages.success(request, f'Student {student.get_full_name()} has been updated successfully.')
+            return redirect('student_profile', username=student.username)
+            
+    except Users.DoesNotExist:
+        messages.error(request, 'Student not found.')
+        return redirect('index')
+
+@login_required
+def delete_student(request, username):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to delete students.')
+        return redirect('index')
+        
+    try:
+        student = Users.objects.get(username=username)
+        
+        if request.method == 'POST':
+            student.delete()
+            messages.success(request, f'Student {student.get_full_name()} has been deleted successfully.')
+            return redirect('index')
+            
+    except Users.DoesNotExist:
+        messages.error(request, 'Student not found.')
+        return redirect('index')
+
+@login_required
+def edit_evaluation(request, eval_id):
+    evaluation = get_object_or_404(Evaluations, id=eval_id)
+    
+    # Check if user is the evaluator and if the assignment is active
+    is_evaluator = request.user == evaluation.evaluator_id
+    
+    # Check if assignment is active (between available_date and due_date)
+    now = timezone.now()
+    assignment_active = evaluation.assignment_id.available_date <= now and evaluation.assignment_id.due_date >= now
+    
+    # Store this on the assignment object for the template to use
+    evaluation.assignment_id.assignment_active = assignment_active
+    
+    # Check if user has permission to edit this evaluation
+    is_instructor = SectionInstructors.objects.filter(
+        section_id=evaluation.assignment_id.section_id, 
+        user_id=request.user
+    ).exists()
+    
+    has_permission = (request.user.is_superuser or 
+                    is_instructor or
+                    (is_evaluator and assignment_active))
+    
+    if not has_permission:
+        if is_evaluator and not assignment_active:
+            messages.error(request, "You can only edit your evaluation while the assignment is active.")
+        else:
+            messages.error(request, "You don't have permission to edit this evaluation.")
+        return redirect('evaluation_view', eval_id=eval_id)
+    
+    if request.method == 'POST':
+        try:
+            # Determine maximum allowed points based on whether this is a self or peer evaluation
+            is_self_evaluation = evaluation.evaluator_id == evaluation.evaluatee_id
+            max_allowed_points = evaluation.assignment_id.max_points_self if is_self_evaluation else evaluation.assignment_id.max_points_partner
+            new_points = int(request.POST.get('points', 0))
+            
+            # For student edits, validate total points distribution
+            if is_evaluator and assignment_active:
+                # Get the student's group
+                enrollment = Enrollments.objects.get(
+                    user_id=request.user,
+                    section_id=evaluation.assignment_id.section_id
+                )
+                
+                if enrollment.group:
+                    # Get all group members
+                    group_members = Enrollments.objects.filter(
+                        group=enrollment.group
+                    ).count()
+                    
+                    # Get all evaluations made by this student for this assignment
+                    student_evaluations = Evaluations.objects.filter(
+                        evaluator_id=request.user,
+                        assignment_id=evaluation.assignment_id
+                    ).exclude(id=evaluation.id)  # Exclude current evaluation
+                    
+                    # Calculate total points including new value
+                    total_points = new_points + sum(e.points for e in student_evaluations)
+                    
+                    # Calculate max total points allowed based on group size
+                    max_total_points = evaluation.assignment_id.max_points_self * group_members
+                    
+                    if total_points > max_total_points:
+                        messages.error(request, f"Total points ({total_points}) cannot exceed maximum allowed ({max_total_points})")
+                        return redirect('evaluation_view', eval_id=eval_id)
+            
+            # Validate points against maximum
+            if new_points > max_allowed_points:
+                messages.error(request, f"Points cannot exceed {max_allowed_points} for {'self' if is_self_evaluation else 'peer'} evaluation.")
+                return redirect('evaluation_view', eval_id=eval_id)
+            
+            # Validate comments required if not full points
+            comments = request.POST.get('comments', '').strip()
+            if new_points != max_allowed_points and not comments:
+                messages.error(request, "Comments are required when score is not 100%.")
+                return redirect('evaluation_view', eval_id=eval_id)
+            
+            # Update evaluation points and comments
+            evaluation.points = new_points
+            evaluation.comments = comments
+            evaluation.save()
+            
+            # Update merit scores if they exist
+            if evaluation.assignment_id.enable_merits:
+                try:
+                    merit_scores = MeritScores.objects.get(evaluation_id=evaluation)
+                    merit_fields = [
+                        'score_workcontribution',
+                        'score_teaminteraction',
+                        'score_teamawareness',
+                        'score_qualityofwork',
+                        'score_knowledgeandskills'
+                    ]
+                    
+                    for field in merit_fields:
+                        value = request.POST.get(field)
+                        if value:
+                            setattr(merit_scores, field, int(value))
+                    
+                    merit_scores.save()
+                except MeritScores.DoesNotExist:
+                    # Only create new merit scores if all fields are provided
+                    merit_data = {}
+                    merit_fields = [
+                        'score_workcontribution',
+                        'score_teaminteraction',
+                        'score_teamawareness',
+                        'score_qualityofwork',
+                        'score_knowledgeandskills'
+                    ]
+                    
+                    if all(request.POST.get(field) for field in merit_fields):
+                        for field in merit_fields:
+                            merit_data[field] = int(request.POST.get(field))
+                        
+                        MeritScores.objects.create(
+                            evaluation_id=evaluation,
+                            **merit_data
+                        )
+            
+            messages.success(request, "Evaluation updated successfully.")
+            return redirect('evaluation_view', eval_id=eval_id)
+        except Exception as e:
+            messages.error(request, f"Error updating evaluation: {str(e)}")
+    
+    return redirect('evaluation_view', eval_id=eval_id)
+
+@login_required
+def delete_evaluation(request, eval_id):
+    evaluation = get_object_or_404(Evaluations, id=eval_id)
+    
+    # Check if user has permission to delete this evaluation
+    is_instructor = SectionInstructors.objects.filter(
+        section_id=evaluation.assignment_id.section_id,
+        user_id=request.user
+    ).exists()
+    
+    if not (request.user.is_superuser or 
+            request.user == evaluation.evaluator_id or 
+            is_instructor):
+        messages.error(request, "You don't have permission to delete this evaluation.")
+        return redirect('evaluation_view', eval_id=eval_id)
+    
+    if request.method == 'POST':
+        try:
+            # Delete merit scores first due to foreign key relationship
+            MeritScores.objects.filter(evaluation_id=evaluation).delete()
+            evaluation.delete()
+            messages.success(request, "Evaluation deleted successfully.")
+            return redirect('student_profile', username=evaluation.evaluatee_id.username)
+        except Exception as e:
+            messages.error(request, f"Error deleting evaluation: {str(e)}")
+    
+    return redirect('evaluation_view', eval_id=eval_id)
 

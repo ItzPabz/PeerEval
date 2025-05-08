@@ -310,44 +310,41 @@ class AssignmentForm(forms.ModelForm):
         return instance
 
 class AssignmentEditForm(forms.ModelForm):
-    name = forms.CharField(
-        max_length=50,
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
-    )
-    available_date = forms.DateTimeField(
-        required=True,
-        widget=forms.DateTimeInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100', 'type': 'datetime-local'})
-    )
-    due_date = forms.DateTimeField(
-        required=True,
-        widget=forms.DateTimeInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100', 'type': 'datetime-local'})
-    )
-    max_points_self = forms.IntegerField(
-        required=True,
-        min_value=0,
-        widget=forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
-    )
-    max_points_partner = forms.IntegerField(
-        required=True,
-        min_value=0,
-        widget=forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
-    )
-    self_eval = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'rounded border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
-    )
-    enable_merits = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'rounded border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
-    )
+    available_datetime = forms.DateTimeField(required=True)
+    due_datetime = forms.DateTimeField(required=True)
 
     class Meta:
         model = Assignments
-        fields = ['name', 'available_date', 'due_date', 'max_points_self', 'max_points_partner', 'self_eval', 'enable_merits']
+        fields = ['name', 'max_points_self', 'max_points_partner', 'self_eval', 'enable_merits']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
+            'max_points_self': forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
+            'max_points_partner': forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
+            'self_eval': forms.CheckboxInput(attrs={'class': 'rounded border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
+            'enable_merits': forms.CheckboxInput(attrs={'class': 'rounded border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial['available_datetime'] = self.instance.available_date
+            self.initial['due_datetime'] = self.instance.due_date
+
+    def clean(self):
+        cleaned_data = super().clean()
+        available_datetime = cleaned_data.get('available_datetime')
+        due_datetime = cleaned_data.get('due_datetime')
+
+        if available_datetime and due_datetime:
+            if due_datetime <= available_datetime:
+                raise ValidationError('Due date must be after available date')
+
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+        instance.available_date = self.cleaned_data['available_datetime']
+        instance.due_date = self.cleaned_data['due_datetime']
         if commit:
             instance.save()
         return instance
@@ -404,6 +401,7 @@ class InstructorForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.is_instructor = True
+        instance.id = self.cleaned_data['id']
         if commit:
             instance.set_password(self.cleaned_data['id'])
             instance.save()
@@ -499,13 +497,14 @@ class SectionAddStudentForm(forms.Form):
         return enrollments
 
 class SectionAddAssignmentForm(forms.ModelForm):
+    available_datetime = forms.DateTimeField(required=True)
+    due_datetime = forms.DateTimeField(required=True)
+
     class Meta:
         model = Assignments
-        fields = ['name', 'available_date', 'due_date', 'max_points_self', 'max_points_partner', 'self_eval', 'enable_merits']
+        fields = ['name', 'max_points_self', 'max_points_partner', 'self_eval', 'enable_merits']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
-            'available_date': forms.DateTimeInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100', 'type': 'datetime-local'}),
-            'due_date': forms.DateTimeInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100', 'type': 'datetime-local'}),
             'max_points_self': forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
             'max_points_partner': forms.NumberInput(attrs={'class': 'w-full p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
             'self_eval': forms.CheckboxInput(attrs={'class': 'rounded border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100'}),
@@ -516,9 +515,22 @@ class SectionAddAssignmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.section = section
 
+    def clean(self):
+        cleaned_data = super().clean()
+        available_datetime = cleaned_data.get('available_datetime')
+        due_datetime = cleaned_data.get('due_datetime')
+
+        if available_datetime and due_datetime:
+            if due_datetime <= available_datetime:
+                raise ValidationError('Due date must be after available date')
+
+        return cleaned_data
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.section_id = self.section
+        instance.available_date = self.cleaned_data['available_datetime']
+        instance.due_date = self.cleaned_data['due_datetime']
         if commit:
             instance.save()
         return instance

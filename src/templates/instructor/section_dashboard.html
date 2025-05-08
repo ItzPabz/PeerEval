@@ -39,6 +39,10 @@
                 <i class="fas fa-chalkboard-teacher"></i>
                 Manage Instructors
             </button>
+            <button class="btn btn-primary flex-1" onclick="document.getElementById('add_instructor_modal').showModal()">
+                <i class="fas fa-chalkboard-teacher"></i>
+                Add Instructor
+            </button>
         {% endif %}
         <button class="btn btn-primary flex-1" onclick="window.location.href='{% url 'export_grades' section.id %}'" {% if students.count == 0 %} disabled {% endif %}>
             <i class="fas fa-download"></i>
@@ -89,7 +93,7 @@
         {% if assignments %}
             <div class="grid grid-cols-3 gap-4">
                 {% for assignment in assignments %}
-                    {% if assignment.is_active %}
+                    {% if assignment.assignment_active %}
                     <div class="card bg-base-100 shadow-sm border border-base-300">
                         <div class="card-body">
                             <div class="flex justify-between items-start">
@@ -134,7 +138,7 @@
         {% if assignments %}
             <div class="grid grid-cols-3 gap-4">
                 {% for assignment in assignments %}
-                    {% if not assignment.is_active %}
+                    {% if not assignment.assignment_active %}
                     <div class="card bg-base-100 shadow-sm border border-base-300 opacity-75">
                         <div class="card-body">
                             <div class="flex justify-between items-start">
@@ -225,24 +229,28 @@
 <dialog id="add_assignment_modal" class="modal modal-bottom sm:modal-middle">
     <div class="modal-box">
         <h3 class="text-lg font-bold">Create Assignment</h3>
-        <form method="POST" action="{% url 'section_add_assignment' section.id %}" onsubmit="setTimes()">
+        <form method="POST" action="{% url 'section_add_assignment' section.id %}" onsubmit="return combineDateTime(this)">
             {% csrf_token %}
-            <input type="hidden" name="available_time" id="available_time" value="00:01" />
-            <input type="hidden" name="due_time" id="due_time" value="23:59" />
             <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
                 <legend class="fieldset-legend">Assignment Details</legend>
                 
                 <label class="label">Assignment Name</label>
                 <input type="text" name="name" class="input input-bordered w-full" required />
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                     <div>
                         <label class="label">Available Date</label>
                         <input type="date" name="available_date" class="input input-bordered w-full" required />
+                        <label class="label">Available Time</label>
+                        <input type="time" name="available_time" class="input input-bordered w-full" value="00:01" required />
+                        <input type="hidden" name="available_datetime" />
                     </div>
                     <div>
                         <label class="label">Due Date</label>
                         <input type="date" name="due_date" class="input input-bordered w-full" required />
+                        <label class="label">Due Time</label>
+                        <input type="time" name="due_time" class="input input-bordered w-full" value="23:59" required />
+                        <input type="hidden" name="due_datetime" />
                     </div>
                 </div>
                 
@@ -283,10 +291,8 @@
     <dialog id="edit_assignment_{{assignment.id}}" class="modal modal-bottom sm:modal-middle">
         <div class="modal-box">
             <h3 class="text-lg font-bold">Edit Assignment: {{ assignment.name }}</h3>
-            <form method="POST" action="{% url 'edit_assignment' assignment.id %}" onsubmit="setTimes()">
+            <form method="POST" action="{% url 'edit_assignment' assignment.id %}" onsubmit="return combineDateTime(this)">
                 {% csrf_token %}
-                <input type="hidden" name="available_time" id="available_time_{{assignment.id}}" value="00:01" />
-                <input type="hidden" name="due_time" id="due_time_{{assignment.id}}" value="23:59" />
                 <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
                     <legend class="fieldset-legend">Assignment Details</legend>
                     
@@ -297,10 +303,16 @@
                         <div>
                             <label class="label">Available Date</label>
                             <input type="date" name="available_date" class="input input-bordered w-full" value="{{ assignment.available_date|date:'Y-m-d' }}" required />
+                            <label class="label">Available Time</label>
+                            <input type="time" name="available_time" class="input input-bordered w-full" value="{{ assignment.available_date|date:'H:i' }}" required />
+                            <input type="hidden" name="available_datetime" />
                         </div>
                         <div>
                             <label class="label">Due Date</label>
                             <input type="date" name="due_date" class="input input-bordered w-full" value="{{ assignment.due_date|date:'Y-m-d' }}" required />
+                            <label class="label">Due Time</label>
+                            <input type="time" name="due_time" class="input input-bordered w-full" value="{{ assignment.due_date|date:'H:i' }}" required />
+                            <input type="hidden" name="due_datetime" />
                         </div>
                     </div>
                     
@@ -336,6 +348,43 @@
         </div>
     </dialog>
 {% endfor %}
+
+<!-- Add Instructor Modal -->
+<dialog id="add_instructor_modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold">Add Instructor</h3>
+        <form method="POST" action="{% url 'add_instructor' %}">
+            {% csrf_token %}
+            <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+                <legend class="fieldset-legend">Instructor Details</legend>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="label">Username</label>
+                        <input type="text" name="username" class="input input-bordered w-full" required />
+                    </div>
+                    <div>
+                        <label class="label">First Name</label>
+                        <input type="text" name="first_name" class="input input-bordered w-full" required />
+                    </div>
+                    <div>
+                        <label class="label">Last Name</label>
+                        <input type="text" name="last_name" class="input input-bordered w-full" required />
+                    </div>
+                    <div>
+                        <label class="label">ID</label>
+                        <input type="text" name="id" class="input input-bordered w-full" required />
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="modal-action w-full">
+                <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('add_instructor_modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary flex-1">Add Instructor</button>
+            </div>
+        </form>
+    </div>
+</dialog>
 
 <style>
 .student-card-hidden {
@@ -412,6 +461,29 @@ function setTimes() {
     const assignmentId = form.id.split('_')[2];
     document.getElementById('available_time_' + assignmentId).value = '23:59';
     document.getElementById('due_time_' + assignmentId).value = '23:59';
+}
+
+function combineDateTime(form) {
+    try {
+        // Available datetime
+        const availDate = form.available_date.value;
+        const availTime = form.available_time.value;
+        if (availDate && availTime) {
+            form.available_datetime.value = `${availDate}T${availTime}`;
+        }
+
+        // Due datetime
+        const dueDate = form.due_date.value;
+        const dueTime = form.due_time.value;
+        if (dueDate && dueTime) {
+            form.due_datetime.value = `${dueDate}T${dueTime}`;
+        }
+
+        return true;
+    } catch (e) {
+        console.error('Error combining date and time:', e);
+        return false;
+    }
 }
 
 </script>
