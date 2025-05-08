@@ -138,9 +138,6 @@ GitHub.sublime-settings
 .history
 
 # Tailwind binary
-tailwindcss-windows-x64.exe
+tailwindcss.exe
 
-.cursorrules
 .vscode
-
-src/static/css/tailwindcss.exe
