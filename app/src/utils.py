@@ -21,7 +21,6 @@ def get_flags(student_id, assignment_id):
 
     peer_avg = peer_scores.aggregate(avg_peer_rating=Avg('avg_score'))['avg_peer_rating']
 
-    # Get team average (excluding self)
     team_scores = MeritScores.objects.filter(
         evaluation_id__assignment_id=assignment_id
     ).exclude(
@@ -85,7 +84,6 @@ def get_flags(student_id, assignment_id):
             'instructor_msg': 'Student rated themselves significantly lower than peer ratings',
         })
 
-    # Manipulator
     if self_score and self_score >= 4:
         team_ratings = MeritScores.objects.filter(
             evaluation_id__evaluator_id=student_id,
@@ -110,7 +108,6 @@ def get_flags(student_id, assignment_id):
                 'instructor_msg': 'Student rated themselves high while rating others significantly lower',
             })
 
-    # Conflict
     for eval in peer_evals:
         peer_rating = MeritScores.objects.filter(evaluation_id=eval).first()
         if not peer_rating:

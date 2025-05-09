@@ -89,7 +89,6 @@ def index(request):
         except EmptyPage:
             past_evaluations_page = paginator.page(paginator.num_pages)
         
-        # Add assignment_active attribute to assignments in past_evaluations
         for evaluation in past_evaluations_page:
             evaluation.assignment_id.assignment_active = (
                 evaluation.assignment_id.available_date <= now and 
@@ -110,29 +109,21 @@ def index(request):
                 
         assignments = active_assignments
         for assignment in assignments:
-            # Use assignment_active attribute instead of trying to set is_active property
             assignment.assignment_active = assignment.available_date <= now and assignment.due_date >= now
             assignment.alert_level = calculate_alert_level(assignment)
 
-        # Calculate statistics
         total_students = active_students.count()
         total_assignments = active_assignments.count()
         total_evaluations = active_evaluations.count()
         
-        # Calculate average students per section
         avg_students_per_section = active_sections.aggregate(
             avg=models.Avg('student_count')
         )['avg'] or 0
         
-        # Calculate average assignments per section
         avg_assignments_per_section = active_sections.aggregate(
             avg=models.Avg('assignment_count')
         )['avg'] or 0
-        
-        # Calculate average evaluations per assignment
-        avg_evaluations_per_assignment = total_assignments and (total_evaluations / total_assignments) or 0
-        
-        # Calculate completion rate for evaluations
+                
         total_possible_evaluations = sum(
             section.student_count * section.assignment_count 
             for section in active_sections
@@ -170,7 +161,6 @@ def index(request):
         else:
             active_courses = Courses.objects.none()
 
-        # Get past terms and organize courses by term
         past_terms = Terms.objects.filter(
             end_date__lt=timezone.now().date()
         ).order_by('-end_date')
@@ -307,7 +297,6 @@ def index(request):
         except EmptyPage:
             past_evaluations_page = paginator.page(paginator.num_pages)
         
-        # Add assignment_active attribute to assignments in past_evaluations
         for evaluation in past_evaluations_page:
             evaluation.assignment_id.assignment_active = (
                 evaluation.assignment_id.available_date <= now and 
@@ -327,7 +316,6 @@ def index(request):
                 return 'gray'   
                 
         for assignment in assignments:
-            # Use assignment_active attribute instead of trying to set is_active property
             assignment.assignment_active = assignment.available_date <= now and assignment.due_date >= now
             assignment.alert_level = calculate_alert_level(assignment)
 
@@ -534,9 +522,7 @@ def section_dashboard(request, section_id):
         ).count()
         available_date = timezone.make_aware(assignment.available_date) if timezone.is_naive(assignment.available_date) else assignment.available_date
         due_date = timezone.make_aware(assignment.due_date) if timezone.is_naive(assignment.due_date) else assignment.due_date
-        # Calculate is_active status directly instead of assignment to property
         is_assignment_active = available_date <= now and due_date >= now
-        # Use is_assignment_active in template via a custom attribute
         assignment.assignment_active = is_assignment_active
         assignment.alert_level = calculate_alert_level(assignment)
         
@@ -544,7 +530,6 @@ def section_dashboard(request, section_id):
         assignment_id__section_id=section
     ).count()
     
-    # Calculate stats descriptions
     active_assignments = sum(1 for a in assignments if hasattr(a, 'assignment_active') and a.assignment_active)
     upcoming_assignments = sum(1 for a in assignments if a.available_date > now)
     past_assignments = sum(1 for a in assignments if a.due_date < now)
@@ -659,7 +644,6 @@ def view_assignment(request, assignment_id):
                         'knowledge_skills': merit['knowledge_skills']
                     }
             except Exception as e:
-                # Log the error but continue processing
                 print(f"Error processing merit scores for evaluation {eval.id}: {e}")
                 eval_data['merit_scores'] = None
             
@@ -762,7 +746,6 @@ def student_profile(request, username):
             sectioninstructors__user_id=current_user
         )
         
-        # Get all assignments for the student's sections
         assignments = Assignments.objects.filter(
             section_id__in=enrollments.values('section_id')
         ).select_related(
@@ -772,7 +755,6 @@ def student_profile(request, username):
             'section_id__term'
         ).order_by('-due_date')
         
-        # Get evaluations given by the student
         evaluations = Evaluations.objects.filter(
             evaluator_id=student,
             assignment_id__section_id__in=instructor_sections
@@ -785,7 +767,6 @@ def student_profile(request, username):
             'evaluatee_id'
         ).order_by('-submission_date')
         
-        # Get evaluations received by the student
         received_evaluations = Evaluations.objects.filter(
             evaluatee_id=student,
             assignment_id__section_id__in=instructor_sections
@@ -798,12 +779,10 @@ def student_profile(request, username):
             'evaluator_id'
         ).order_by('-submission_date')
 
-        # Get merit scores for all evaluations
         merit_scores_queryset = MeritScores.objects.filter(
             evaluation_id__in=received_evaluations
         )
 
-        # Group evaluations by assignment and process merit scores
         assignments_with_evaluations = []
         for assignment in assignments:
             assignment_evaluations = received_evaluations.filter(assignment_id=assignment)
@@ -848,7 +827,6 @@ def student_profile(request, username):
                         'merit_scores': merit_scores
                     })
 
-                # Get flags using the utils function
                 flags = get_flags(student.id, assignment.id)
                 
                 assignments_with_evaluations.append({
@@ -857,7 +835,6 @@ def student_profile(request, username):
                     'flags': flags
                 })
 
-        # Group evaluations given by assignment and process merit scores
         assignments_with_given_evaluations = []
         for assignment in assignments:
             assignment_evaluations = evaluations.filter(assignment_id=assignment)
@@ -982,7 +959,6 @@ def add_instructor(request):
         else:
             for field, errors in form.errors.items():
                 for error in errors:
-                    # Skip __all__ errors related to username
                     if field == '__all__' and 'username' in error.lower():
                         continue
                     if field == '__all__':
@@ -1240,27 +1216,22 @@ def section_manage_groups(request, section_id):
             'count': len(group_students)
         })
     
-    # Calculate average group size
     total_students = students.count()
     total_groups = groups.count()
     avg_group_size = round(total_students / total_groups, 1) if total_groups > 0 else 0
     
-    # Check for unassigned students and show message
     unassigned_count = unassigned_students.count()
     if unassigned_count > 0:
         messages.warning(request, f'There are {unassigned_count} unassigned student{"s" if unassigned_count != 1 else ""} that need to be placed in groups.')
     
     if request.method == 'POST':
         if 'add_group' in request.POST:
-            # Get the highest numbered group
             highest_group = groups.order_by('-name').first()
             try:
                 next_number = int(highest_group.name) + 1 if highest_group else 1
             except ValueError:
-                # If the group name isn't a number, just use the count + 1
                 next_number = groups.count() + 1
             
-            # Create the new group
             new_group = Groups.objects.create(
                 name=str(next_number),
                 section_id=section
@@ -1289,7 +1260,6 @@ def section_manage_groups(request, section_id):
                     
                     all_students = list(students)
                     
-                    # Delete existing groups
                     Groups.objects.filter(section_id=section).delete()
                     
                     if method == 'random':
@@ -1321,10 +1291,8 @@ def section_manage_groups(request, section_id):
                         student_scores.sort(key=lambda x: x[1], reverse=True)
                         all_students = [student for student, _ in student_scores]
                     
-                    # Reset all student group assignments
                     Enrollments.objects.filter(section_id=section).update(group=None)
                     
-                    # Create new groups and assign students
                     current_group = 1
                     groups = []
                     
@@ -1341,7 +1309,6 @@ def section_manage_groups(request, section_id):
                         
                         current_group += 1
                     
-                    # Handle leftover students
                     leftover_students = []
                     for group in groups:
                         group_students = list(Enrollments.objects.filter(group=group))
@@ -1460,7 +1427,6 @@ def section_manage_groups(request, section_id):
                             messages.warning(request, f'Could not find enrollment for student ID {student_id} in section {section_id}')
                             continue
                 
-                # Clean up empty groups
                 empty_groups = Groups.objects.filter(
                     section_id=section
                 ).annotate(
@@ -1678,22 +1644,17 @@ def evaluation_view(request, eval_id):
     except MeritScores.DoesNotExist:
         merit_scores = None
     
-    # Calculate total points from other evaluations by the same user for this assignment
     other_evaluations_total = evaluation.assignment_id.get_evaluations_total_for_user(
         evaluation.evaluator_id.id,
         exclude_evaluation_id=evaluation.id
     )
     
-    # Get the group size for the evaluator
     group_size = evaluation.assignment_id.get_group_size_for_user(evaluation.evaluator_id.id)
     
-    # Calculate max points for the group
     max_points_for_group = evaluation.assignment_id.get_max_points_for_group(group_size)
     
-    # Get remaining points available
     remaining_points = max_points_for_group - other_evaluations_total - evaluation.points
     
-    # Add assignment_active attribute to the assignment object
     now = timezone.now()
     evaluation.assignment_id.assignment_active = (
         evaluation.assignment_id.available_date <= now and 
@@ -1732,7 +1693,6 @@ def import_wizard(request, section_id):
     def extract_group_number(group_text):
         if not group_text:
             return None
-        # Remove any non-digit characters and get the first number found
         numbers = re.findall(r'\d+', group_text)
         return numbers[0] if numbers else None
 
@@ -1843,7 +1803,6 @@ def import_wizard(request, section_id):
                                     user.save()
                                     users_updated += 1
                             else:
-                                # Create new user with explicit password setting
                                 user = Users.objects.create(
                                     id=row_data['user_id'],
                                     username=row_data['username'],
@@ -1851,7 +1810,6 @@ def import_wizard(request, section_id):
                                     last_name=row_data['last_name'],
                                     is_instructor=False
                                 )
-                                # Set password explicitly
                                 password = str(row_data['user_id'])
                                 user.set_password(password)
                                 user.save()
@@ -2038,9 +1996,8 @@ def section_student(request, section_id):
         id__in=enrolled_students_list.values_list('user_id', flat=True)
     ).order_by('last_name', 'first_name')
     
-    # Get items per page from request or use default
-    enrolled_per_page = int(request.GET.get('enrolled_per_page', 16))  # Default to 16 for xl screens
-    per_page = int(request.GET.get('per_page', 16))  # Default to 16 for xl screens
+    enrolled_per_page = int(request.GET.get('enrolled_per_page', 16))
+    per_page = int(request.GET.get('per_page', 16))
     
     enrolled_paginator = Paginator(enrolled_students_list, enrolled_per_page)
     try:
@@ -2397,17 +2354,13 @@ def delete_student(request, username):
 def edit_evaluation(request, eval_id):
     evaluation = get_object_or_404(Evaluations, id=eval_id)
     
-    # Check if user is the evaluator and if the assignment is active
     is_evaluator = request.user == evaluation.evaluator_id
     
-    # Check if assignment is active (between available_date and due_date)
     now = timezone.now()
     assignment_active = evaluation.assignment_id.available_date <= now and evaluation.assignment_id.due_date >= now
     
-    # Store this on the assignment object for the template to use
     evaluation.assignment_id.assignment_active = assignment_active
     
-    # Check if user has permission to edit this evaluation
     is_instructor = SectionInstructors.objects.filter(
         section_id=evaluation.assignment_id.section_id, 
         user_id=request.user
@@ -2426,58 +2379,47 @@ def edit_evaluation(request, eval_id):
     
     if request.method == 'POST':
         try:
-            # Determine maximum allowed points based on whether this is a self or peer evaluation
             is_self_evaluation = evaluation.evaluator_id == evaluation.evaluatee_id
             max_allowed_points = evaluation.assignment_id.max_points_self if is_self_evaluation else evaluation.assignment_id.max_points_partner
             new_points = int(request.POST.get('points', 0))
             
-            # For student edits, validate total points distribution
             if is_evaluator and assignment_active:
-                # Get the student's group
                 enrollment = Enrollments.objects.get(
                     user_id=request.user,
                     section_id=evaluation.assignment_id.section_id
                 )
                 
                 if enrollment.group:
-                    # Get all group members
                     group_members = Enrollments.objects.filter(
                         group=enrollment.group
                     ).count()
                     
-                    # Get all evaluations made by this student for this assignment
                     student_evaluations = Evaluations.objects.filter(
                         evaluator_id=request.user,
                         assignment_id=evaluation.assignment_id
-                    ).exclude(id=evaluation.id)  # Exclude current evaluation
+                    ).exclude(id=evaluation.id)
                     
-                    # Calculate total points including new value
                     total_points = new_points + sum(e.points for e in student_evaluations)
                     
-                    # Calculate max total points allowed based on group size
                     max_total_points = evaluation.assignment_id.max_points_self * group_members
                     
                     if total_points > max_total_points:
                         messages.error(request, f"Total points ({total_points}) cannot exceed maximum allowed ({max_total_points})")
                         return redirect('evaluation_view', eval_id=eval_id)
             
-            # Validate points against maximum
             if new_points > max_allowed_points:
                 messages.error(request, f"Points cannot exceed {max_allowed_points} for {'self' if is_self_evaluation else 'peer'} evaluation.")
                 return redirect('evaluation_view', eval_id=eval_id)
             
-            # Validate comments required if not full points
             comments = request.POST.get('comments', '').strip()
             if new_points != max_allowed_points and not comments:
                 messages.error(request, "Comments are required when score is not 100%.")
                 return redirect('evaluation_view', eval_id=eval_id)
             
-            # Update evaluation points and comments
             evaluation.points = new_points
             evaluation.comments = comments
             evaluation.save()
             
-            # Update merit scores if they exist
             if evaluation.assignment_id.enable_merits:
                 try:
                     merit_scores = MeritScores.objects.get(evaluation_id=evaluation)
@@ -2496,7 +2438,6 @@ def edit_evaluation(request, eval_id):
                     
                     merit_scores.save()
                 except MeritScores.DoesNotExist:
-                    # Only create new merit scores if all fields are provided
                     merit_data = {}
                     merit_fields = [
                         'score_workcontribution',
@@ -2526,7 +2467,6 @@ def edit_evaluation(request, eval_id):
 def delete_evaluation(request, eval_id):
     evaluation = get_object_or_404(Evaluations, id=eval_id)
     
-    # Check if user has permission to delete this evaluation
     is_instructor = SectionInstructors.objects.filter(
         section_id=evaluation.assignment_id.section_id,
         user_id=request.user
@@ -2540,7 +2480,6 @@ def delete_evaluation(request, eval_id):
     
     if request.method == 'POST':
         try:
-            # Delete merit scores first due to foreign key relationship
             MeritScores.objects.filter(evaluation_id=evaluation).delete()
             evaluation.delete()
             messages.success(request, "Evaluation deleted successfully.")

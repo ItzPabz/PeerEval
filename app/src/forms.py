@@ -730,11 +730,9 @@ class TermForm(forms.ModelForm):
         if not all([start_date, end_date]):
             return cleaned_data
 
-        # Check if end_date is after start_date
         if end_date <= start_date:
             raise ValidationError('End date must be after start date')
 
-        # Check for overlapping dates
         overlapping_terms = Terms.objects.filter(
             (models.Q(start_date__lte=start_date) & models.Q(end_date__gte=start_date)) |
             (models.Q(start_date__lte=end_date) & models.Q(end_date__gte=end_date)) |
