@@ -2,16 +2,28 @@
 
 # Function to backup sensitive files
 backup_sensitive_files() {
-    cp /app/peereval/settings.py /app/peereval/settings.py.backup
-    cp /app/peereval/urls.py /app/peereval/urls.py.backup
-    cp /app/.env /app/.env.backup
+    if [ -f "/app/peereval/settings.py" ]; then
+        cp /app/peereval/settings.py /app/peereval/settings.py.backup
+    fi
+    if [ -f "/app/peereval/urls.py" ]; then
+        cp /app/peereval/urls.py /app/peereval/urls.py.backup
+    fi
+    if [ -f "/app/.env" ]; then
+        cp /app/.env /app/.env.backup
+    fi
 }
 
 # Function to restore sensitive files
 restore_sensitive_files() {
-    cp /app/peereval/settings.py.backup /app/peereval/settings.py
-    cp /app/peereval/urls.py.backup /app/peereval/urls.py
-    cp /app/.env.backup /app/.env
+    if [ -f "/app/peereval/settings.py.backup" ]; then
+        cp /app/peereval/settings.py.backup /app/peereval/settings.py
+    fi
+    if [ -f "/app/peereval/urls.py.backup" ]; then
+        cp /app/peereval/urls.py.backup /app/peereval/urls.py
+    fi
+    if [ -f "/app/.env.backup" ]; then
+        cp /app/.env.backup /app/.env
+    fi
 }
 
 # Initial backup of sensitive files

@@ -5,7 +5,7 @@ PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y curl git
 
 COPY app/requirements.txt .
 RUN pip install -r requirements.txt

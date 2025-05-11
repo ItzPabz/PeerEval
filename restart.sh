@@ -8,4 +8,4 @@ docker rm peereval-web
 docker-compose up -d --build peereval-web
 
 # Show logs for the web container
-docker-compose logs -f peereval-web 
+docker-compose logs -f peereval-web
