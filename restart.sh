@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Stop only the web container
-docker stop peereval-web
-docker rm peereval-web
+# Stop all containers
+docker-compose down
 
-# Rebuild and start only the web container
-docker-compose up -d --build peereval-web
+# Remove all containers and volumes
+docker-compose rm -f
+docker volume prune -f
 
-# Show logs for the web container
-docker-compose logs -f peereval-web
+# Rebuild and start containers
+docker-compose up -d --build
+
+# Show logs
+docker-compose logs -f 
