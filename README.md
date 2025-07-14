@@ -5,4 +5,3 @@
 # PeerEval
 A peer evaluation system for academic institutions.
 
-## README in Progress will be done by 5/20/2025
